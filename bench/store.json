@@ -1,0 +1,14 @@
+{
+  "policy": {
+    "enabledActions": ["accept_claim", "make_offer", "provide_evidence", "send_message", "hold"],
+    "autoLimit": "30.00",
+    "text": "Damaged or not-as-described items under 30.00 USD: full refund without return. If an order shows DELIVERED with tracking, defend not-received claims with proof of fulfillment."
+  },
+  "orders": [
+    { "order": "#1042", "transactionId": "35J85859CK356733M", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "40.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001042", "shipped": "2026-10-10", "deliveredOn": "2026-10-17" },
+    { "order": "#1051", "transactionId": "8095208033759170L", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "21.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001051", "shipped": "2026-10-12", "deliveredOn": "2026-10-20" },
+    { "order": "#1052", "transactionId": "6SB68773HF6867812", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "22.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001052", "shipped": "2026-10-11", "deliveredOn": "2026-10-18" },
+    { "order": "#1054", "transactionId": "9GX9483434625222M", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "24.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001054", "shipped": "2026-10-13", "deliveredOn": "2026-10-21" },
+    { "order": "#1047", "transactionId": "4KD20371MN5512093", "buyerEmail": "another.customer@example.com", "amount": "58.00", "currency": "USD", "status": "DELIVERED", "carrier": "UPS", "tracking": "1Z999AA10123456784", "shipped": "2026-10-09", "deliveredOn": "2026-10-14" }
+  ]
+}
