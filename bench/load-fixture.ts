@@ -10,9 +10,12 @@ export const FIXTURES = [
   "dispute-snad-legit.json",
 ] as const;
 
+// note: PP-R-JJZ after the sandbox resolved it on its own; no expected action
+export const RESOLVED_FIXTURE = "dispute-inr-resolved.json" as const;
+
 export type FixtureName = (typeof FIXTURES)[number];
 
-export function loadDispute(name: FixtureName): Json {
+export function loadDispute(name: FixtureName | typeof RESOLVED_FIXTURE): Json {
   const parsed = parseDispute(readJson(`disputes/${name}`));
   if (!parsed.ok) throw new Error(`fixture ${name}: ${parsed.error}`);
   return parsed.value;

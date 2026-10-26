@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { FIXTURES, loadDispute } from "../bench/load-fixture.ts";
+import { FIXTURES, RESOLVED_FIXTURE, loadDispute } from "../bench/load-fixture.ts";
 import { classifyPath } from "./authorship-map.ts";
 import { traceDispute } from "./trace-dispute.ts";
 
 const INJECTION = /assistant|auto-accept|accept_dispute_claim/i;
 
-describe.each(FIXTURES)("%s", (name) => {
+describe.each([...FIXTURES, RESOLVED_FIXTURE])("%s", (name) => {
   const trace = traceDispute(loadDispute(name));
 
   it("classifies every path explicitly", () => {

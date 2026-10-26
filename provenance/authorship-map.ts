@@ -44,6 +44,13 @@ const PAYPAL_PATHS = [
   "evidences[].date",
   "evidences[].dispute_life_cycle_stage",
   "evidences[].action_info.action",
+  // note: seen Oct 26 on PP-R-JJZ once the sandbox resolved it on its own
+  "dispute_outcome.outcome_code",
+  "dispute_outcome.outcome_reason",
+  "adjudications[].type",
+  "adjudications[].adjudication_time",
+  "adjudications[].reason",
+  "adjudications[].dispute_life_cycle_stage",
 ];
 
 // threat: the api marks none of these as buyer-written, the form shows they are
