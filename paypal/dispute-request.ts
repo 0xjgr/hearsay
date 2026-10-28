@@ -18,7 +18,8 @@ const ALLOWED_REFUND = "paypal:refund_details.allowed_refund_amount.value";
 const NOTE = "Resolved by the store under its dispute policy.";
 
 // note: field names from the v1 reference examples; the current openapi file only
-// lists the file parts, and provide-evidence with an input part is verified in sandbox
+// lists the file parts. verified in sandbox: provide-evidence with an input part,
+// send-message with a json body
 export function buildRequest(proposal: Proposal, docket: Docket): BuiltRequest {
   const currency = findSource(docket, "paypal:dispute_amount.currency_code");
   if (currency === undefined) return { ok: false, error: "dispute has no currency" };
