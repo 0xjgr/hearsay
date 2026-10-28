@@ -8,6 +8,10 @@ export class GrantBook {
     this.#open.add(fingerprint(disputeId, proposal));
   }
 
+  has(disputeId: string, proposal: Proposal): boolean {
+    return this.#open.has(fingerprint(disputeId, proposal));
+  }
+
   // threat: a grant reused for a changed amount or a second refund
   spend(disputeId: string, proposal: Proposal): boolean {
     return this.#open.delete(fingerprint(disputeId, proposal));

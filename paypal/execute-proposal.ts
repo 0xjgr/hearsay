@@ -28,7 +28,7 @@ export async function executeProposal(input: ExecutionInput): Promise<Execution>
   const { proposal, verdict, docket } = input;
   if (proposal.kind === "hold") return { kind: "held" };
   if (verdict.kind === "deny") return { kind: "refused", reason: `denied by ${verdict.hits.map((h) => h.rule).join(",")}` };
-  if (verdict.kind === "ask" && !input.grants.spend(docket.disputeId, proposal)) {
+  if (verdict.kind === "ask" && !input.grants.has(docket.disputeId, proposal)) {
     return { kind: "refused", reason: "needs the owner's grant" };
   }
   const built = buildRequest(proposal, docket);
@@ -37,6 +37,8 @@ export async function executeProposal(input: ExecutionInput): Promise<Execution>
     return { kind: "refused", reason: `paypal offers no ${proposal.kind} link on ${docket.disputeId} now` };
   }
   if (input.send === "dry-run") return { kind: "dry-run", request: built.request };
+  // note: spent only here, so a refusal or a dry run leaves the owner's grant open
+  if (verdict.kind === "ask") input.grants.spend(docket.disputeId, proposal);
   return postRequest(input.send.toolkit, docket.disputeId, built.request);
 }
 

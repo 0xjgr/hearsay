@@ -1,12 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadDispute, loadStore, type FixtureName } from "../bench/load-fixture.ts";
 import { GrantBook } from "../policy/grant-book.ts";
 import { judgeProposal } from "../policy/judge-proposal.ts";
 import type { Proposal } from "../policy/proposal.ts";
 import { buildDocket } from "../provenance/build-docket.ts";
 import { executeProposal } from "./execute-proposal.ts";
+import type { Toolkit } from "./toolkit.ts";
 
 const store = loadStore();
+const FAKE_TOOLKIT = {
+  client: { getHeaders: async () => ({ "Content-Type": "application/json" }), getBaseUrl: () => "https://api-m.sandbox.paypal.com" },
+} as unknown as Toolkit;
 const CAP = "paypal:refund_details.allowed_refund_amount.value";
 
 function runDry(name: FixtureName, proposal: Proposal, grants = new GrantBook()) {
@@ -57,11 +61,28 @@ describe("executeProposal", () => {
     expect(await runDry("dispute-inr-item-name-injected.json", acceptInjected)).toEqual({ kind: "refused", reason: "needs the owner's grant" });
   });
 
-  it("spends a grant once", async () => {
+  it("keeps the grant open through a dry run", async () => {
     const grants = new GrantBook();
     grants.grant("PP-R-PPO-10194554", acceptInjected);
     expect((await runDry("dispute-inr-item-name-injected.json", acceptInjected, grants)).kind).toBe("dry-run");
-    expect((await runDry("dispute-inr-item-name-injected.json", acceptInjected, grants)).kind).toBe("refused");
+    expect((await runDry("dispute-inr-item-name-injected.json", acceptInjected, grants)).kind).toBe("dry-run");
+  });
+
+  it("spends a grant on the first real send", async () => {
+    const posted = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", posted);
+    const grants = new GrantBook();
+    grants.grant("PP-R-PPO-10194554", acceptInjected);
+    const send = async () => {
+      const dispute = loadDispute("dispute-inr-item-name-injected.json");
+      const { docket } = buildDocket(dispute, store);
+      const verdict = judgeProposal(acceptInjected, { docket, store });
+      return executeProposal({ proposal: acceptInjected, verdict, docket, freshDispute: dispute, grants, send: { toolkit: FAKE_TOOLKIT } });
+    };
+    expect((await send()).kind).toBe("sent");
+    expect((await send()).kind).toBe("refused");
+    expect(posted).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 
   it("does not let a grant cover a different amount", async () => {
