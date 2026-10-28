@@ -33,3 +33,40 @@ export async function fetchDispute(toolkit: Toolkit, disputeId: string): Promise
   }
   return parseDispute(payload);
 }
+
+const ListedSchema = z.object({
+  items: z
+    .array(
+      z.looseObject({
+        dispute_id: z.string(),
+        create_time: z.string(),
+        update_time: z.string(),
+        reason: z.string(),
+        status: z.string(),
+        dispute_state: z.string().optional(),
+        dispute_life_cycle_stage: z.string().optional(),
+        dispute_amount: z.object({ currency_code: z.string(), value: z.string() }).optional(),
+      }),
+    )
+    .default([]),
+});
+
+export type ListedDispute = z.infer<typeof ListedSchema>["items"][number];
+
+export type DisputeList = { ok: true; value: ListedDispute[] } | { ok: false; error: string };
+
+// todo: pages past the first 50; the sandbox store has fewer
+export async function listDisputes(toolkit: Toolkit): Promise<DisputeList> {
+  const reply = await toolkit.handleToolCall({
+    id: "list-disputes",
+    type: "function",
+    function: { name: "list_disputes", arguments: JSON.stringify({ page_size: 50 }) },
+  });
+  const payload: Json = JSON.parse(String(reply.content));
+  if (payload !== null && typeof payload === "object" && "error" in payload) {
+    return { ok: false, error: `list_disputes: ${JSON.stringify(payload.error)}` };
+  }
+  const listed = ListedSchema.safeParse(payload);
+  if (!listed.success) return { ok: false, error: z.prettifyError(listed.error) };
+  return { ok: true, value: listed.data.items };
+}
