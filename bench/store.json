@@ -9,6 +9,7 @@
     { "order": "#1051", "transactionId": "8095208033759170L", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "21.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001051", "shipped": "2026-10-12", "deliveredOn": "2026-10-20" },
     { "order": "#1052", "transactionId": "6SB68773HF6867812", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "22.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001052", "shipped": "2026-10-11", "deliveredOn": "2026-10-18" },
     { "order": "#1054", "transactionId": "9GX9483434625222M", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "24.00", "currency": "USD", "status": "DELIVERED", "carrier": "USPS", "tracking": "9400111200000000001054", "shipped": "2026-10-13", "deliveredOn": "2026-10-21" },
+    { "order": "#1055", "transactionId": "2GC472740G758283N", "buyerEmail": "sb-7fvex53549113@personal.example.com", "amount": "25.00", "currency": "USD", "status": "IN_TRANSIT", "carrier": "USPS", "tracking": "9400111200000000001055", "shipped": "2026-10-24" },
     { "order": "#1047", "transactionId": "4KD20371MN5512093", "buyerEmail": "another.customer@example.com", "amount": "58.00", "currency": "USD", "status": "DELIVERED", "carrier": "UPS", "tracking": "1Z999AA10123456784", "shipped": "2026-10-09", "deliveredOn": "2026-10-14" }
   ]
 }
