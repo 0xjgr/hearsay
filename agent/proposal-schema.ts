@@ -2,10 +2,13 @@ import { z } from "zod";
 import type { Citation } from "../provenance/author.ts";
 import type { Proposal } from "../policy/proposal.ts";
 
-// note: the cite enum is built per docket, so the model can only cite what exists;
-// one branch per kind, so every action carries the parameters it needs
+// note: the cite enum is built per docket, so the model can only cite what exists
 export function buildAnswerSchema(citable: Citation[]): z.ZodType<Proposal> {
-  const cite = z.enum(citable as [Citation, ...Citation[]]);
+  return buildProposalSchema(z.enum(citable as [Citation, ...Citation[]]));
+}
+
+// note: one branch per kind, so every action carries the parameters it needs
+export function buildProposalSchema(cite: z.ZodType<Citation>): z.ZodType<Proposal> {
   const cited = z.object({ value: z.string(), cite });
   const because = z.array(cited);
   return z.discriminatedUnion("kind", [

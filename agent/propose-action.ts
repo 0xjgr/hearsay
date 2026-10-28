@@ -33,23 +33,17 @@ export async function proposeAction(docket: Docket, endpoint: ModelEndpoint, opt
   const schema = buildAnswerSchema(view.citable);
   const started = performance.now();
   const elapsed = () => (performance.now() - started) / 1000;
-  const response = await fetch(`${endpoint.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}),
-    },
-    body: JSON.stringify({
-      model: endpoint.model,
-      temperature: 0,
-      reasoning_effort: endpoint.reasoning,
-      messages: [
-        { role: "system", content: options.warnModel ? `${INSTRUCTIONS}\n${WARNING}` : INSTRUCTIONS },
-        { role: "user", content: view.text },
-      ],
-      response_format: { type: "json_schema", json_schema: { name: "proposal", strict: true, schema: z.toJSONSchema(schema) } },
-    }),
+  const response = await postChat(endpoint, {
+    model: endpoint.model,
+    temperature: 0,
+    reasoning_effort: endpoint.reasoning,
+    messages: [
+      { role: "system", content: options.warnModel ? `${INSTRUCTIONS}\n${WARNING}` : INSTRUCTIONS },
+      { role: "user", content: view.text },
+    ],
+    response_format: { type: "json_schema", json_schema: { name: "proposal", strict: true, schema: z.toJSONSchema(schema) } },
   });
+  if (typeof response === "string") return { ok: false, error: response, seconds: elapsed() };
   if (!response.ok) return { ok: false, error: `model endpoint ${response.status}: ${await response.text()}`, seconds: elapsed() };
   const reply = ReplySchema.safeParse(await response.json());
   if (!reply.success) return { ok: false, error: `unexpected reply: ${z.prettifyError(reply.error)}`, seconds: elapsed() };
@@ -58,6 +52,24 @@ export async function proposeAction(docket: Docket, endpoint: ModelEndpoint, opt
   // threat: a model that ignores the schema must not slip an unknown cite past the rules
   if (!answer.success) return { ok: false, error: `answer off schema: ${z.prettifyError(answer.error)}`, seconds: elapsed() };
   return { ok: true, proposal: answer.data, reasoning: message.reasoning, seconds: elapsed(), tokens: reply.data.usage?.total_tokens };
+}
+
+// note: an endpoint that is down or unreachable is an expected failure, not a bug
+async function postChat(endpoint: ModelEndpoint, body: object): Promise<Response | string> {
+  try {
+    return await fetch(`${endpoint.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
+    const detail = cause instanceof Error ? ("code" in cause ? String(cause.code) : cause.message) : String(cause);
+    return `model endpoint unreachable at ${endpoint.baseUrl}: ${detail}`;
+  }
 }
 
 function parseJson(text: string): unknown {
