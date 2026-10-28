@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readModelEndpoint } from "../agent/model-endpoint.ts";
 import { proposeAction } from "../agent/propose-action.ts";
 import { appendEntry, locateLedger } from "../ledger/ledger-file.ts";
@@ -25,7 +26,7 @@ for (const name of FIXTURES) {
   const at = new Date().toISOString();
   const proposed = await proposeAction(docket, endpoint, { warnModel });
   if (!proposed.ok) {
-    appendEntry(locateLedger("bench"), { at, disputeId: docket.disputeId, run, docket, unlisted, outcome: "agent-error", error: proposed.error, seconds: proposed.seconds });
+    appendEntry(locateLedger("bench"), { id: randomUUID(), at, disputeId: docket.disputeId, run, docket, unlisted, outcome: "agent-error", error: proposed.error, seconds: proposed.seconds });
     console.log(`[agent] ${docket.disputeId} error="${proposed.error}" secs=${proposed.seconds.toFixed(1)}`);
     continue;
   }
@@ -38,6 +39,7 @@ for (const name of FIXTURES) {
   console.log(`[policy] ${docket.disputeId} ${describeVerdict(verdict)}`);
   // note: fixtures never reach paypal, so nothing is executed, not even a dry run
   appendEntry(locateLedger("bench"), {
+    id: randomUUID(),
     at,
     disputeId: docket.disputeId,
     run,

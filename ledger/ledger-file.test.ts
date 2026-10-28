@@ -15,6 +15,7 @@ const run = { source: "fixture", model: "qwen3:8b", reasoning: "high", warnModel
 
 function judgedEntry(proposal: Proposal): LedgerEntry {
   return {
+    id: "3f2c9d1e-0000-4000-8000-000000000001",
     at: "2026-10-28T17:00:00.000Z",
     disputeId: docket.disputeId,
     run,
@@ -44,7 +45,7 @@ describe("ledger file", () => {
   it("reads back what it appended, in order", () => {
     const path = openLedger();
     const first = judgedEntry(accept);
-    const second: LedgerEntry = { at: first.at, disputeId: docket.disputeId, run, docket, unlisted, outcome: "agent-error", error: "answer off schema", seconds: 3 };
+    const second: LedgerEntry = { id: "3f2c9d1e-0000-4000-8000-000000000002", at: first.at, disputeId: docket.disputeId, run, docket, unlisted, outcome: "agent-error", error: "answer off schema", seconds: 3 };
     appendEntry(path, first);
     appendEntry(path, second);
     expect(readLedger(path)).toEqual({ entries: [first, second], broken: [] });

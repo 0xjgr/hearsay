@@ -6,14 +6,17 @@ import { buildProposalSchema } from "../agent/proposal-schema.ts";
 import type { Citation } from "../provenance/author.ts";
 import type { LedgerEntry } from "./ledger-entry.ts";
 
+export type LedgerName = "live" | "bench";
+
 // note: live runs and bench runs never share a file, so the bench can be wiped
-export function locateLedger(name: "live" | "bench"): string {
+export function locateLedger(name: LedgerName): string {
   return fileURLToPath(new URL(`${name}.jsonl`, import.meta.url));
 }
 
-export function appendEntry(path: string, entry: LedgerEntry): void {
+export function appendEntry<E extends LedgerEntry>(path: string, entry: E): E {
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, JSON.stringify(entry) + "\n");
+  return entry;
 }
 
 export type LedgerRead = { entries: LedgerEntry[]; broken: { line: number; error: string }[] };
@@ -79,17 +82,17 @@ const ExecutionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("failed"), request: RequestSchema, status: z.number(), reply: z.string() }),
 ]);
 
-const BaseSchema = z.object({
-  at: z.iso.datetime(),
-  disputeId: z.string(),
+const StampSchema = z.object({ id: z.string().min(1), at: z.iso.datetime(), disputeId: z.string() });
+
+const ReviewSchema = StampSchema.extend({
   run: z.object({ source: z.enum(["live", "fixture"]), model: z.string(), reasoning: z.string(), warnModel: z.boolean() }),
   docket: DocketSchema,
   unlisted: z.array(z.string()),
 });
 
 const EntrySchema: z.ZodType<LedgerEntry> = z.discriminatedUnion("outcome", [
-  BaseSchema.extend({ outcome: z.literal("agent-error"), error: z.string(), seconds: z.number() }),
-  BaseSchema.extend({
+  ReviewSchema.extend({ outcome: z.literal("agent-error"), error: z.string(), seconds: z.number() }),
+  ReviewSchema.extend({
     outcome: z.literal("judged"),
     proposer: z.enum(["agent", "operator"]),
     proposal: buildProposalSchema(CitationSchema),
@@ -99,4 +102,6 @@ const EntrySchema: z.ZodType<LedgerEntry> = z.discriminatedUnion("outcome", [
     seconds: z.number().optional(),
     tokens: z.number().optional(),
   }),
+  StampSchema.extend({ outcome: z.literal("approved"), review: z.string(), execution: ExecutionSchema }),
+  StampSchema.extend({ outcome: z.literal("rejected"), review: z.string(), note: z.string().optional() }),
 ]);
