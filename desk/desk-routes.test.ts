@@ -31,7 +31,7 @@ const FAKE_TOOLKIT = {
 
 function openDesk(overrides: Partial<Desk> = {}): Desk {
   const ledgerPath = join(mkdtempSync(join(tmpdir(), "hearsay-desk-")), "live.jsonl");
-  return { toolkit: FAKE_TOOLKIT, store, endpoint: { baseUrl: "http://localhost:1", model: "m", apiKey: undefined, reasoning: "low" }, ledgerPath, send: false, frozen: new Set(), ...overrides };
+  return { toolkit: FAKE_TOOLKIT, store, endpoint: { baseUrl: "http://localhost:1", model: "m", apiKey: undefined, reasoning: "low", timeoutSeconds: 5, maxTokens: 100 }, ledgerPath, send: false, frozen: new Set(), ...overrides };
 }
 
 function seedReview(desk: Desk, proposal: Proposal, id: string): JudgedEntry {

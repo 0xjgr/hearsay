@@ -36,6 +36,7 @@ export async function proposeAction(docket: Docket, endpoint: ModelEndpoint, opt
   const response = await postChat(endpoint, {
     model: endpoint.model,
     temperature: 0,
+    max_tokens: endpoint.maxTokens,
     reasoning_effort: endpoint.reasoning,
     messages: [
       { role: "system", content: options.warnModel ? `${INSTRUCTIONS}\n${WARNING}` : INSTRUCTIONS },
@@ -64,8 +65,10 @@ async function postChat(endpoint: ModelEndpoint, body: object): Promise<Response
         ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}),
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(endpoint.timeoutSeconds * 1000),
     });
   } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") return `model endpoint gave no answer within ${endpoint.timeoutSeconds}s`;
     const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
     const detail = cause instanceof Error ? ("code" in cause ? String(cause.code) : cause.message) : String(cause);
     return `model endpoint unreachable at ${endpoint.baseUrl}: ${detail}`;
