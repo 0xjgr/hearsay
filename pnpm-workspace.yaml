@@ -1,0 +1,4 @@
+# note: the bryntum trial postinstall only stamps a per-install id; the scheduler works without it
+allowBuilds:
+  "@bryntum/scheduler-trial": false
+  "@bryntum/scheduler-trial-lib": false
