@@ -46,6 +46,8 @@ const ListedSchema = z.object({
         dispute_state: z.string().optional(),
         dispute_life_cycle_stage: z.string().optional(),
         dispute_amount: z.object({ currency_code: z.string(), value: z.string() }).optional(),
+        // note: present only while paypal waits on the seller
+        seller_response_due_date: z.string().optional(),
       }),
     )
     .default([]),

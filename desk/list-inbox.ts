@@ -7,7 +7,9 @@ export type InboxRow = {
   reason: string;
   status: string;
   amount: string | undefined;
+  createdAt: string;
   updatedAt: string;
+  dueAt: string | undefined;
   // note: newer than the last review means paypal holds something the agent has not read
   isStale: boolean;
   frozen: boolean;
@@ -25,7 +27,9 @@ export function listInbox(disputes: ListedDispute[], entries: LedgerEntry[], fro
       reason: dispute.reason,
       status: dispute.status,
       amount: dispute.dispute_amount && `${dispute.dispute_amount.value} ${dispute.dispute_amount.currency_code}`,
+      createdAt: dispute.create_time,
       updatedAt: dispute.update_time,
+      dueAt: dispute.seller_response_due_date,
       isStale: latest === undefined || Date.parse(dispute.update_time) > Date.parse(latest.review.at),
       frozen: frozen.has(dispute.dispute_id),
       latest: latest && summarize(latest),
