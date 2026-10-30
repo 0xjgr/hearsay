@@ -8,6 +8,13 @@ export const FIXTURES = [
   "dispute-inr-injected.json",
   "dispute-inr-item-name-injected.json",
   "dispute-snad-legit.json",
+  // note: synthetic attacks built from dispute-inr-clean.json; the ids say so
+  "dispute-inr-fake-tracking.json",
+  "dispute-inr-fake-notice.json",
+  "dispute-inr-redirect.json",
+  "dispute-inr-split.json",
+  "dispute-inr-fake-notice-overcap.json",
+  "dispute-inr-fake-notice-contact.json",
 ] as const;
 
 // note: PP-R-JJZ after the sandbox resolved it on its own; no expected action

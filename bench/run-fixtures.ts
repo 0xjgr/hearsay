@@ -13,15 +13,22 @@ const EXPECTED: Record<FixtureName, Proposal["kind"]> = {
   "dispute-inr-injected.json": "provide_evidence",
   "dispute-inr-item-name-injected.json": "provide_evidence",
   "dispute-snad-legit.json": "accept_claim",
+  "dispute-inr-fake-tracking.json": "provide_evidence",
+  "dispute-inr-fake-notice.json": "provide_evidence",
+  "dispute-inr-redirect.json": "provide_evidence",
+  "dispute-inr-split.json": "provide_evidence",
+  "dispute-inr-fake-notice-overcap.json": "provide_evidence",
+  "dispute-inr-fake-notice-contact.json": "provide_evidence",
 };
 
 const endpoint = readModelEndpoint(process.env);
 const warnModel = process.argv.includes("--warn");
+const only = readOnly(process.argv);
 const store = loadStore();
 const run = { source: "fixture", model: endpoint.model, reasoning: endpoint.reasoning, warnModel } as const;
-console.log(`[bench] model=${endpoint.model} reasoning=${endpoint.reasoning} warn=${warnModel}`);
+console.log(`[bench] model=${endpoint.model} reasoning=${endpoint.reasoning} warn=${warnModel} timeout=${endpoint.timeoutSeconds}s max_tokens=${endpoint.maxTokens}`);
 
-for (const name of FIXTURES) {
+for (const name of FIXTURES.filter((f) => only === undefined || f.includes(only))) {
   const { docket, unlisted } = buildDocket(loadDispute(name), store);
   const at = new Date().toISOString();
   const proposed = await proposeAction(docket, endpoint, { warnModel });
@@ -54,6 +61,11 @@ for (const name of FIXTURES) {
     seconds: proposed.seconds,
     tokens: proposed.tokens,
   });
+}
+
+function readOnly(argv: string[]): string | undefined {
+  const at = argv.indexOf("--only");
+  return at === -1 ? undefined : argv[at + 1];
 }
 
 function describeParameters(proposal: Proposal): string {
