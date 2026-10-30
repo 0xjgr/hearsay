@@ -7,20 +7,29 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p desk/ui",
     "fixtures": "node --env-file-if-exists=.env bench/run-fixtures.ts",
     "desk": "node --env-file-if-exists=../.env --env-file-if-exists=.env desk/serve-desk.ts",
-    "dispute": "node --env-file-if-exists=../.env --env-file-if-exists=.env paypal/run-dispute.ts"
+    "dispute": "node --env-file-if-exists=../.env --env-file-if-exists=.env paypal/run-dispute.ts",
+    "ui": "vite desk/ui"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
     "@hono/node-server": "2.1.4",
     "@paypal/agent-toolkit": "1.11.0",
     "hono": "4.13.13",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
     "typescript": "7.0.2",
+    "vite": "8.3.5",
     "vitest": "5.0.5"
   }
 }

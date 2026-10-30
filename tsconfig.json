@@ -12,7 +12,12 @@
     "erasableSyntaxOnly": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "desk/ui"
+  ]
 }
