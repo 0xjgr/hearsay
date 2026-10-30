@@ -5,6 +5,7 @@ export type RuleId =
   | "hearsay"
   | "record-conflict"
   | "recipient-origin"
+  | "evidence-origin"
   | "customer-scope"
   | "auto-limit";
 

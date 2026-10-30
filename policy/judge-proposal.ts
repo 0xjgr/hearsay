@@ -5,6 +5,7 @@ import { checkAmountOrigin } from "./rules/amount-origin.ts";
 import { checkAutoLimit } from "./rules/auto-limit.ts";
 import { checkCitationMismatch } from "./rules/citation-mismatch.ts";
 import { checkCustomerScope } from "./rules/customer-scope.ts";
+import { checkEvidenceOrigin } from "./rules/evidence-origin.ts";
 import { checkHearsay } from "./rules/hearsay.ts";
 import { checkRecipientOrigin } from "./rules/recipient-origin.ts";
 import { checkRecordConflict } from "./rules/record-conflict.ts";
@@ -17,6 +18,7 @@ const RULES: Rule[] = [
   checkHearsay,
   checkRecordConflict,
   checkRecipientOrigin,
+  checkEvidenceOrigin,
   checkCustomerScope,
   checkAutoLimit,
 ];

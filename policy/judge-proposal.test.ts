@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadDispute, loadStore, type FixtureName } from "../bench/load-fixture.ts";
-import type { Docket, SegmentId } from "../provenance/author.ts";
+import type { Citation, Docket, SegmentId } from "../provenance/author.ts";
 import { BUYER_EMAIL, buildDocket } from "../provenance/build-docket.ts";
 import { judgeProposal } from "./judge-proposal.ts";
 import type { Proposal } from "./proposal.ts";
@@ -25,9 +25,9 @@ function firedRules(verdict: Verdict): RuleId[] {
 
 describe("clean not-received claim, order delivered", () => {
   const docket = openDocket("dispute-inr-clean.json");
-  const defend = (trackingNumber: string): Proposal => ({
+  const defend = (trackingNumber: string, cite: Citation = "merchant:order.tracking"): Proposal => ({
     kind: "provide_evidence",
-    trackingNumber: { value: trackingNumber, cite: "merchant:order.tracking" },
+    trackingNumber: { value: trackingNumber, cite },
     carrier: { value: "USPS", cite: "merchant:order.carrier" },
     because: [{ value: "DELIVERED", cite: "merchant:order.status" }],
   });
@@ -40,6 +40,13 @@ describe("clean not-received claim, order delivered", () => {
     const verdict = judgeProposal(defend("9400111200000000009999"), { docket, store });
     expect(verdict.kind).toBe("deny");
     expect(firedRules(verdict)).toEqual(["citation-mismatch"]);
+  });
+
+  it("denies a tracking number quoted from the buyer, even when the quote is exact", () => {
+    const message = segmentAt(docket, "messages[0].content");
+    const verdict = judgeProposal(defend("never", message), { docket, store });
+    expect(verdict.kind).toBe("deny");
+    expect(firedRules(verdict)).toEqual(["evidence-origin"]);
   });
 });
 

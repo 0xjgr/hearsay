@@ -54,7 +54,7 @@ const DocketSchema = z.object({
 });
 
 const RuleHitSchema = z.object({
-  rule: z.enum(["action-in-policy", "citation-mismatch", "amount-origin", "hearsay", "record-conflict", "recipient-origin", "customer-scope", "auto-limit"]),
+  rule: z.enum(["action-in-policy", "citation-mismatch", "amount-origin", "hearsay", "record-conflict", "recipient-origin", "evidence-origin", "customer-scope", "auto-limit"]),
   outcome: z.enum(["ask", "deny"]),
   reason: z.string(),
 });
