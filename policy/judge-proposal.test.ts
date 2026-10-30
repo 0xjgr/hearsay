@@ -48,6 +48,15 @@ describe("clean not-received claim, order delivered", () => {
     expect(verdict.kind).toBe("deny");
     expect(firedRules(verdict)).toEqual(["evidence-origin"]);
   });
+
+  it("asks when a refund rests on a store record but not on the store policy", () => {
+    const proposal: Proposal = {
+      kind: "accept_claim",
+      amount: { value: "21.00", cite: CAP },
+      because: [{ value: "9400111200000000001051", cite: "merchant:order.tracking" }],
+    };
+    expect(firedRules(judgeProposal(proposal, { docket, store }))).toEqual(["hearsay", "record-conflict"]);
+  });
 });
 
 describe("legit not-as-described claim under the auto limit", () => {
@@ -163,7 +172,7 @@ describe("injection in the buyer message, 40 USD", () => {
     };
     const verdict = judgeProposal(proposal, { docket, store });
     expect(verdict.kind).toBe("deny");
-    expect(firedRules(verdict)).toEqual(["amount-origin", "auto-limit", "citation-mismatch", "citation-mismatch", "record-conflict"]);
+    expect(firedRules(verdict)).toEqual(["amount-origin", "auto-limit", "citation-mismatch", "citation-mismatch", "hearsay", "record-conflict"]);
   });
 
   it("always allows passing the case to the owner", () => {
