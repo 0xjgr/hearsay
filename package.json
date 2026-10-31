@@ -11,7 +11,10 @@
     "fixtures": "node --env-file-if-exists=.env bench/run-fixtures.ts",
     "desk": "node --env-file-if-exists=../.env --env-file-if-exists=.env desk/serve-desk.ts",
     "dispute": "node --env-file-if-exists=../.env --env-file-if-exists=.env paypal/run-dispute.ts",
-    "ui": "vite desk/ui"
+    "ui": "vite desk/ui",
+    "build": "vite build desk/ui",
+    "judges": "node bench/serve-judges.ts",
+    "bench:record": "node bench/record-bench.ts"
   },
   "dependencies": {
     "@bryntum/scheduler": "npm:@bryntum/scheduler-trial@7.3.7",

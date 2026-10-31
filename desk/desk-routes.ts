@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { readLedger, locateLedger } from "../ledger/ledger-file.ts";
+import { buildBenchRoutes } from "../bench/bench-routes.ts";
+import { readLedger } from "../ledger/ledger-file.ts";
 import { replayReviews } from "../ledger/review-state.ts";
 import { listDisputes } from "../paypal/toolkit.ts";
 import { approveReview, rejectReview, type Decided } from "./decide-review.ts";
@@ -54,7 +55,8 @@ export function buildDeskRoutes(desk: Desk): Hono {
     return answerDecision(c, rejectReview(desk, reviewId, body.data.note));
   });
 
-  app.get("/api/ledger/bench", (c) => c.json(readLedger(locateLedger("bench"))));
+  app.get("/api/mode", (c) => c.json({ mode: "desk" }));
+  app.route("/", buildBenchRoutes(desk.store));
 
   return app;
 }
