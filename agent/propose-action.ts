@@ -37,7 +37,8 @@ export async function proposeAction(docket: Docket, endpoint: ModelEndpoint, opt
     model: endpoint.model,
     temperature: 0,
     max_tokens: endpoint.maxTokens,
-    reasoning_effort: endpoint.reasoning,
+    // note: models without thinking reject the field outright, so "none" leaves it out
+    ...(endpoint.reasoning === "none" ? {} : { reasoning_effort: endpoint.reasoning }),
     messages: [
       { role: "system", content: options.warnModel ? `${INSTRUCTIONS}\n${WARNING}` : INSTRUCTIONS },
       { role: "user", content: view.text },
