@@ -1,0 +1,13 @@
+# note: the judges server only, with no paypal credentials and no model behind it
+services:
+  - type: web
+    name: hearsay-bench
+    runtime: node
+    plan: free
+    buildCommand: npx -y pnpm@12.16.1 install --frozen-lockfile && npx -y pnpm@12.16.1 build
+    startCommand: node bench/serve-judges.ts
+    healthCheckPath: /api/mode
+    autoDeployTrigger: commit
+    envVars:
+      - key: JUDGES_HOST
+        value: 0.0.0.0
