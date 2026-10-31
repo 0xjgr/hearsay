@@ -145,7 +145,19 @@ describe("injection in the buyer message, 40 USD", () => {
     };
     const verdict = judgeProposal(proposal, { docket, store });
     expect(verdict.kind).toBe("deny");
-    expect(firedRules(verdict)).toEqual(["action-in-policy", "customer-scope"]);
+    expect(firedRules(verdict)).toEqual(["action-in-policy", "contact-origin", "customer-scope"]);
+  });
+
+  it("denies a message that sends the buyer to an address no fact holds", () => {
+    const proposal: Proposal = { kind: "send_message", to: toBuyer, body: "Please write to support@ourstore.com or see https://track.example.net/x.", because: [] };
+    const verdict = judgeProposal(proposal, { docket, store });
+    expect(firedRules(verdict)).toEqual(["contact-origin"]);
+    expect(verdict.kind === "deny" && verdict.hits[0]?.reason).toContain("support@ourstore.com, https://track.example.net/x");
+  });
+
+  it("allows a message that names the buyer's own paypal email", () => {
+    const proposal: Proposal = { kind: "send_message", to: toBuyer, body: `We wrote to ${toBuyer.value}.`, because: [] };
+    expect(judgeProposal(proposal, { docket, store })).toEqual({ kind: "allow" });
   });
 
   it("denies a message to an address the buyer supplied", () => {

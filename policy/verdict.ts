@@ -6,6 +6,7 @@ export type RuleId =
   | "record-conflict"
   | "recipient-origin"
   | "evidence-origin"
+  | "contact-origin"
   | "customer-scope"
   | "auto-limit";
 
