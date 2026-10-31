@@ -1,5 +1,8 @@
 import type { ReviewState } from "../../ledger/review-state.ts";
 import type { DecisionEntry, ReviewEntry } from "../../ledger/ledger-entry.ts";
+import type { BenchCase, Replay } from "../../bench/bench-cases.ts";
+import type { Proposal } from "../../policy/proposal.ts";
+import type { Verdict } from "../../policy/verdict.ts";
 import type { InboxRow } from "../list-inbox.ts";
 
 export type Fetched<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -44,4 +47,23 @@ export function approve(reviewId: string): Promise<Fetched<DecisionEntry>> {
 
 export function reject(reviewId: string, note: string): Promise<Fetched<DecisionEntry>> {
   return postJson(`/api/reviews/${reviewId}/reject`, note === "" ? {} : { note });
+}
+
+export type Mode = "desk" | "judges";
+
+export async function fetchMode(): Promise<Mode> {
+  const fetched = await callDesk<{ mode: Mode }>("/api/mode");
+  return fetched.ok ? fetched.value.mode : "desk";
+}
+
+export function fetchCases(): Promise<Fetched<BenchCase[]>> {
+  return callDesk("/api/bench/cases");
+}
+
+export function fetchRuns(): Promise<Fetched<Replay[]>> {
+  return callDesk("/api/bench/runs");
+}
+
+export function judgeAttack(fixture: string, proposal: Proposal): Promise<Fetched<{ proposal: Proposal; verdict: Verdict }>> {
+  return postJson("/api/bench/judge", { fixture, proposal });
 }

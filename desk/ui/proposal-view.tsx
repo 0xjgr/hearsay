@@ -59,7 +59,7 @@ function CitedRow({ name, cited, docket }: { name: string; cited: CitedValue; do
   );
 }
 
-function VerdictView({ verdict }: { verdict: Verdict }) {
+export function VerdictView({ verdict }: { verdict: Verdict }) {
   return (
     <div className={`block block-${verdict.kind}`}>
       <h2 className="pane-head">

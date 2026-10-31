@@ -1,23 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import type { InboxRow } from "../list-inbox.ts";
+import { BenchView } from "./bench-view.tsx";
 import { CaseView } from "./case-view.tsx";
 import { DeadlineBoard } from "./deadline-board.tsx";
-import { fetchInbox, type Fetched } from "./desk-api.ts";
+import { fetchInbox, fetchMode, type Fetched, type Mode } from "./desk-api.ts";
 import { InboxTable } from "./inbox-table.tsx";
 
-type View = "case" | "deadlines";
+type View = "case" | "deadlines" | "bench";
 
 export function DeskScreen() {
   const [inbox, setInbox] = useState<Fetched<InboxRow[]> | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [view, setView] = useState<View>("case");
+  const [mode, setMode] = useState<Mode | undefined>(undefined);
 
   const refreshInbox = useCallback(async () => {
     setInbox(await fetchInbox());
   }, []);
 
   useEffect(() => {
-    void refreshInbox();
+    void fetchMode().then((found) => {
+      setMode(found);
+      if (found === "judges") setView("bench");
+      else void refreshInbox();
+    });
   }, [refreshInbox]);
 
   const selectedRow = inbox?.ok ? inbox.value.find((r) => r.disputeId === selectedId) : undefined;
@@ -31,9 +37,9 @@ export function DeskScreen() {
     <div className="desk">
       <header className="masthead">
         <span className="wordmark">hearsay</span>
-        <span className="masthead-sub">dispute desk</span>
+        <span className="masthead-sub">{mode === "judges" ? "dispute desk · bench for judges, no paypal and no model" : "dispute desk"}</span>
         <nav className="views">
-          {(["case", "deadlines"] as const).map((v) => (
+          {(mode === "judges" ? (["bench"] as const) : (["case", "deadlines", "bench"] as const)).map((v) => (
             <button key={v} className={`view-tab${view === v ? " is-selected" : ""}`} onClick={() => setView(v)}>
               {v}
             </button>
@@ -46,8 +52,12 @@ export function DeskScreen() {
           <span className="legend-note">who wrote each value</span>
         </span>
       </header>
-      <InboxTable inbox={inbox} selectedId={selectedId} onSelect={openCase} onRefresh={refreshInbox} />
-      {view === "deadlines" ? (
+      {view === "bench" ? (
+        <BenchView />
+      ) : (
+        <InboxTable inbox={inbox} selectedId={selectedId} onSelect={openCase} onRefresh={refreshInbox} />
+      )}
+      {view === "bench" ? null : view === "deadlines" ? (
         inbox?.ok ? (
           <DeadlineBoard rows={inbox.value} onOpen={openCase} />
         ) : (

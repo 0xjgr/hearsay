@@ -170,6 +170,16 @@ button, input { font: inherit; color: inherit; }
 .board-label { white-space: nowrap; font: 12px var(--mono); padding: 0 6px; }
 .board-body { --b-current-time-color: var(--accent); }
 
+.bench-attack { grid-column: 1 / -1; font-size: 12.5px; }
+.attack-presets { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
+.attack-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 5px 6px; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; }
+.attack-row.row-buyer { border-left-color: var(--accent); }
+.attack-row .attack-value, .attack-row .link-button { grid-column: 2; }
+.attack-row .link-button { margin-left: 0; justify-self: start; }
+.attack-input { min-width: 0; width: 100%; background: var(--surface); border: 1px solid var(--line); padding: 4px 6px; font: 12.5px var(--mono); }
+.attack-input:focus, .attack-text:focus { outline: 1px solid var(--accent); }
+.attack-text { width: 100%; margin-top: 8px; resize: vertical; font-family: var(--sans); }
+
 @media (max-width: 1100px) {
   .desk { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; height: auto; }
   .inbox { border-right: 0; border-bottom: 1px solid var(--line); max-height: 40vh; }
