@@ -6,7 +6,7 @@ import { buildProposalSchema } from "../agent/proposal-schema.ts";
 import type { Citation } from "../provenance/author.ts";
 import type { LedgerEntry } from "./ledger-entry.ts";
 
-export type LedgerName = "live" | "bench";
+export type LedgerName = "live" | "bench" | "corpus";
 
 // note: live runs and bench runs never share a file, so the bench can be wiped
 export function locateLedger(name: LedgerName): string {
