@@ -2,7 +2,12 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { z } from "zod";
+import { buildDemoDesk } from "../desk/demo-desk.ts";
+import type { ReviewEntry } from "../ledger/ledger-entry.ts";
+import { readLedger } from "../ledger/ledger-file.ts";
+import { RECORDED_PATH } from "./bench-cases.ts";
 import { buildBenchRoutes } from "./bench-routes.ts";
+import { buildCorpus } from "./build-corpus.ts";
 import { loadStore } from "./load-fixture.ts";
 
 const SettingsSchema = z.object({
@@ -12,10 +17,15 @@ const SettingsSchema = z.object({
 });
 
 const settings = SettingsSchema.parse(process.env);
+const store = loadStore();
+const corpus = buildCorpus();
+const recorded = readLedger(RECORDED_PATH).entries.filter((e): e is ReviewEntry => e.outcome === "judged" || e.outcome === "agent-error");
 const app = new Hono();
 // threat: this server is public, so it mounts the bench and nothing that reads or writes paypal
-app.route("/", buildBenchRoutes(loadStore()));
+app.route("/", buildBenchRoutes(store));
 app.get("/api/mode", (c) => c.json({ mode: "judges" }));
+// note: built per request so the recorded disputes always sit around today on the board
+app.get("/api/demo/desk", (c) => c.json(buildDemoDesk(corpus, recorded, store, new Date())));
 app.all("/api/*", (c) => c.json({ error: "not on the judges server" }, 404));
 app.use("/*", serveStatic({ root: "./desk/ui/dist" }));
 app.get("/*", serveStatic({ path: "./desk/ui/dist/index.html" }));

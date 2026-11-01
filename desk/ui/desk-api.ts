@@ -4,6 +4,7 @@ import type { BenchCase, Replay } from "../../bench/bench-cases.ts";
 import type { Proposal } from "../../policy/proposal.ts";
 import type { Verdict } from "../../policy/verdict.ts";
 import type { InboxRow } from "../list-inbox.ts";
+import { decideDemo, fetchDemoDetail, fetchDemoInbox, replayDemoReview } from "./demo-backend.ts";
 
 export type Fetched<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -29,31 +30,40 @@ function postJson<T>(path: string, payload: object): Promise<Fetched<T>> {
   return callDesk<T>(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
 }
 
+export type Mode = "desk" | "judges";
+
+// note: set once by fetchMode; in judges' mode every desk call is answered in the browser
+let mode: Mode = "desk";
+
+export async function fetchMode(): Promise<Mode> {
+  const fetched = await callDesk<{ mode: Mode }>("/api/mode");
+  mode = fetched.ok ? fetched.value.mode : "desk";
+  return mode;
+}
+
 export function fetchInbox(): Promise<Fetched<InboxRow[]>> {
+  if (mode === "judges") return fetchDemoInbox();
   return callDesk("/api/disputes");
 }
 
 export function fetchDetail(disputeId: string): Promise<Fetched<DisputeDetail>> {
+  if (mode === "judges") return fetchDemoDetail(disputeId);
   return callDesk(`/api/disputes/${encodeURIComponent(disputeId)}`);
 }
 
 export function requestReview(disputeId: string, message?: string): Promise<Fetched<ReviewEntry>> {
+  if (mode === "judges") return replayDemoReview(disputeId, message);
   return postJson(`/api/disputes/${encodeURIComponent(disputeId)}/reviews`, message === undefined ? {} : { message });
 }
 
 export function approve(reviewId: string): Promise<Fetched<DecisionEntry>> {
+  if (mode === "judges") return decideDemo(reviewId, { kind: "approve" });
   return postJson(`/api/reviews/${reviewId}/approve`, {});
 }
 
 export function reject(reviewId: string, note: string): Promise<Fetched<DecisionEntry>> {
+  if (mode === "judges") return decideDemo(reviewId, { kind: "reject", note });
   return postJson(`/api/reviews/${reviewId}/reject`, note === "" ? {} : { note });
-}
-
-export type Mode = "desk" | "judges";
-
-export async function fetchMode(): Promise<Mode> {
-  const fetched = await callDesk<{ mode: Mode }>("/api/mode");
-  return fetched.ok ? fetched.value.mode : "desk";
 }
 
 export function fetchCases(): Promise<Fetched<BenchCase[]>> {

@@ -60,7 +60,7 @@ function ExecutionView({ execution }: { execution: Execution }) {
           {"status" in execution && ` → ${execution.status}`}
         </p>
       )}
-      {execution.kind === "dry-run" && <p className="pane-note">Dry run: the desk runs with DESK_SEND=0 or the dispute is frozen.</p>}
+      {execution.kind === "dry-run" && <p className="pane-note">Dry run: nothing reached PayPal (DESK_SEND=0, a frozen dispute, or the hosted demo).</p>}
     </div>
   );
 }

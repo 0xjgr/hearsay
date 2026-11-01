@@ -21,8 +21,7 @@ export function DeskScreen() {
   useEffect(() => {
     void fetchMode().then((found) => {
       setMode(found);
-      if (found === "judges") setView("bench");
-      else void refreshInbox();
+      void refreshInbox();
     });
   }, [refreshInbox]);
 
@@ -37,9 +36,9 @@ export function DeskScreen() {
     <div className="desk">
       <header className="masthead">
         <span className="wordmark">hearsay</span>
-        <span className="masthead-sub">{mode === "judges" ? "dispute desk · bench for judges, no paypal and no model" : "dispute desk"}</span>
+        <span className="masthead-sub">{mode === "judges" ? "dispute desk · hosted demo: recorded agent runs, no paypal and no model behind it" : "dispute desk"}</span>
         <nav className="views">
-          {(mode === "judges" ? (["bench"] as const) : (["case", "deadlines", "bench"] as const)).map((v) => (
+          {(["case", "deadlines", "bench"] as const).map((v) => (
             <button key={v} className={`view-tab${view === v ? " is-selected" : ""}`} onClick={() => setView(v)}>
               {v}
             </button>
