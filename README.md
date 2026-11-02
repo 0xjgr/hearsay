@@ -145,12 +145,13 @@ In both guarded runs the agent's final answer says the refund was made. The guar
 
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, sandbox): `list_disputes` and `get_dispute` for every read; `guardToolkit()` wraps its `accept_dispute_claim` and `create_refund`.
 - **Disputes API v1** (REST, sandbox): `provide-evidence`, `make-offer`, `accept-claim` and `send-message`, sent only by the executor.
+- **Webhooks API v1**: `CUSTOMER.DISPUTE.*` notifications reach a separate public listener (`DESK_WEBHOOK_PORT`, one route) that checks each one with `verify-webhook-signature`, sending the event back byte for byte, drops retries by event id and queues the same review the poller runs. Approve and every write stay on 127.0.0.1.
 - Sandbox Resolution Center with test buyer accounts, to open the real disputes the corpus is built from.
 
 ## Limitations
 
 - Disputes cannot be opened by API as a buyer, so the live demo uses a reserve of disputes opened by hand; the corpus covers the rest.
-- No webhooks yet: the desk polls (`DESK_POLL_SECONDS`).
+- The webhook listener is covered by tests against PayPal's verify contract but has not yet received a live sandbox notification; polling (`DESK_POLL_SECONDS`) stays as the fallback.
 - One transaction per dispute; attachments are not read.
 - The store record is a JSON file standing in for the merchant's order system.
 - `send-message` and `provide-evidence` have been written to the sandbox for real; `accept-claim` and `make-offer` bodies follow the v1 reference and are untested.
