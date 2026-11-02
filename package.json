@@ -17,7 +17,9 @@
     "judges": "node bench/serve-judges.ts",
     "bench:record": "node bench/record-bench.ts",
     "bench": "node --env-file-if-exists=.env bench/run-corpus.ts",
-    "bench:scores": "node bench/print-scores.ts"
+    "bench:scores": "node bench/print-scores.ts",
+    "bench:toolkit": "node --env-file-if-exists=.env bench/run-toolkit-corpus.ts",
+    "bench:toolkit-scores": "node bench/print-toolkit-scores.ts"
   },
   "dependencies": {
     "@bryntum/scheduler": "npm:@bryntum/scheduler-trial@7.3.7",
