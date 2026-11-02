@@ -33,7 +33,7 @@ export function InboxTable({ inbox, selectedId, onSelect, onRefresh }: InboxProp
                 <span className="mono inbox-id">{row.disputeId}</span>
                 <span className="mono inbox-amount">{row.amount ?? "-"}</span>
                 <span className="inbox-reason">{labelReason(row.reason)}</span>
-                <span className="mono inbox-status">{row.status.toLowerCase().replaceAll("_", " ")}</span>
+                <span className="mono inbox-status">{labelStatus(row.status)}</span>
                 <span className="inbox-flags">
                   {row.latest === undefined ? <span className="mark mark-quiet">unreviewed</span> : <StatusMark status={row.latest.status} />}
                   {row.isStale && row.latest !== undefined && <span className="mark mark-quiet">new activity</span>}
@@ -53,4 +53,11 @@ export function InboxTable({ inbox, selectedId, onSelect, onRefresh }: InboxProp
 function sortForTriage(rows: InboxRow[]): InboxRow[] {
   const weight = (r: InboxRow) => (r.pending > 0 ? 0 : r.isStale && !r.frozen ? 1 : 2);
   return [...rows].sort((a, b) => weight(a) - weight(b) || b.updatedAt.localeCompare(a.updatedAt));
+}
+
+// note: paypal's status names wrap to three lines in a 380px inbox
+function labelStatus(status: string): string {
+  if (status === "WAITING_FOR_SELLER_RESPONSE") return "seller to respond";
+  if (status === "WAITING_FOR_BUYER_RESPONSE") return "buyer to respond";
+  return status.toLowerCase().replaceAll("_", " ");
 }

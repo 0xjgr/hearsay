@@ -5,6 +5,7 @@ import { CaseView } from "./case-view.tsx";
 import { DeadlineBoard } from "./deadline-board.tsx";
 import { fetchInbox, fetchMode, type Fetched, type Mode } from "./desk-api.ts";
 import { InboxTable } from "./inbox-table.tsx";
+import { JudgesTour } from "./judges-tour.tsx";
 
 type View = "case" | "deadlines" | "bench";
 
@@ -35,7 +36,12 @@ export function DeskScreen() {
   return (
     <div className="desk">
       <header className="masthead">
-        <span className="wordmark">hearsay</span>
+        <button className="wordmark" onClick={() => {
+          setSelectedId(undefined);
+          setView("case");
+        }}>
+          hearsay
+        </button>
         <span className="masthead-sub">{mode === "judges" ? "dispute desk · hosted demo: recorded agent runs, no paypal and no model behind it" : "dispute desk"}</span>
         <nav className="views">
           {(["case", "deadlines", "bench"] as const).map((v) => (
@@ -62,6 +68,8 @@ export function DeskScreen() {
         ) : (
           <main className="case case-empty">The board needs the inbox first.</main>
         )
+      ) : selectedId === undefined && mode === "judges" && inbox?.ok ? (
+        <JudgesTour rows={inbox.value} onOpen={openCase} onBench={() => setView("bench")} onDeadlines={() => setView("deadlines")} />
       ) : selectedId === undefined ? (
         <main className="case case-empty">Pick a dispute from the inbox.</main>
       ) : (
