@@ -8,7 +8,8 @@ export type RuleId =
   | "evidence-origin"
   | "contact-origin"
   | "customer-scope"
-  | "auto-limit";
+  | "auto-limit"
+  | "tool-scope";
 
 export type RuleHit = { rule: RuleId; outcome: "ask" | "deny"; reason: string };
 
