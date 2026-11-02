@@ -23,6 +23,8 @@ Vocabulary used in the code, the UI and this README:
 
 Merchants already hand disputes and refunds to AI agents (Chargeflow, Justt, Forethought, Fini). Those agents read what the buyer wrote: the dispute message, but also the item name and description the buyer typed in the dispute form, which the PayPal Disputes API returns without marking who wrote them. Opening a dispute is free, so anyone who paid the store can write instructions to its agent.
 
+Disputes already cost merchants money without an agent in the loop: resolving one first-party misuse dispute cost $82 on average in 2026, up from $74 in 2025, and 64% of merchants saw that kind of dispute grow ([MRC 2026 Global eCommerce Payments & Fraud Report](https://www.chargebackgurus.com/blog/fraud-statistics-from-mrc-report), as summarized by Chargeback Gurus). An agent that can be talked into a refund turns each of those disputes into a free attempt. In a 2025 benchmark of 100 profit-seeking attacks on customer-service agents across 10 domains, splitting the payload across messages was the most consistent technique ([arXiv 2512.24415](https://arxiv.org/abs/2512.24415)); the corpus below splits it across PayPal fields.
+
 Approval prompts in MCP hosts show *what* a tool call will do, never *where each value came from*. Hearsay adds that layer.
 
 ## How it works
