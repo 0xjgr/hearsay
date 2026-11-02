@@ -8,10 +8,10 @@ import { reachVerdict, type RuleHit, type Verdict } from "../policy/verdict.ts";
 import { BUYER_EMAIL, buildDocket } from "../provenance/build-docket.ts";
 import { findSource, type Docket } from "../provenance/author.ts";
 import { citeToolCall, isGuardedTool, type GuardedTool } from "./cite-tool-call.ts";
-import { fetchDispute, type Toolkit } from "./toolkit.ts";
+import { fetchDispute, type ToolCaller } from "./toolkit.ts";
 
-type ToolCall = Parameters<Toolkit["handleToolCall"]>[0];
-type ToolReply = Awaited<ReturnType<Toolkit["handleToolCall"]>>;
+type ToolCall = Parameters<ToolCaller["handleToolCall"]>[0];
+type ToolReply = Awaited<ReturnType<ToolCaller["handleToolCall"]>>;
 
 export type GuardScope = {
   // note: the one dispute the owner handed the agent; intent comes from here, not from what it read
@@ -20,11 +20,9 @@ export type GuardScope = {
   grants: GrantBook;
 };
 
-export type GuardedToolkit = Pick<Toolkit, "getTools" | "handleToolCall">;
-
 // note: a drop-in for PayPalAgentToolkit from @paypal/agent-toolkit/openai; the toolkit
 // needs disputes.get enabled so the guard can re-read the dispute before each write
-export function guardToolkit(toolkit: Toolkit, scope: GuardScope): GuardedToolkit {
+export function guardToolkit(toolkit: ToolCaller, scope: GuardScope): ToolCaller {
   return {
     getTools: () => toolkit.getTools().filter((tool) => isReadTool(tool.function.name) || isGuardedTool(tool.function.name)),
     handleToolCall: async (call) => {
@@ -38,7 +36,7 @@ export function guardToolkit(toolkit: Toolkit, scope: GuardScope): GuardedToolki
   };
 }
 
-async function judgeCall(toolkit: Toolkit, scope: GuardScope, call: ToolCall, tool: GuardedTool): Promise<ToolReply> {
+async function judgeCall(toolkit: ToolCaller, scope: GuardScope, call: ToolCall, tool: GuardedTool): Promise<ToolReply> {
   // note: judged against the dispute as paypal returns it now, not the copy the agent read
   const fresh = await fetchDispute(toolkit, scope.disputeId);
   if (!fresh.ok) return refuse(call, tool, fresh.error);
@@ -58,15 +56,17 @@ async function judgeCall(toolkit: Toolkit, scope: GuardScope, call: ToolCall, to
     return toolkit.handleToolCall(call);
   }
   console.log(`[guard] ${verdict.kind} tool=${tool} dispute=${docket.disputeId} rules=${listRules(verdict)}`);
-  return reply(call, {
-    error: {
+  // note: a hold is not a failure; shaped as an error, a toolkit agent retries it by every route it has
+  if (verdict.kind === "ask") {
+    return reply(call, {
+      status: "held_for_owner",
       source: "hearsay",
-      verdict: verdict.kind,
-      message: verdict.kind === "ask" ? "held for the store owner; do not retry until they approve" : "denied by the store's rules; do not retry",
+      message: "queued for the store owner, who approves or rejects it; nothing else to do for this dispute, do not call another write tool",
       hits: verdict.hits,
       proposal,
-    },
-  });
+    });
+  }
+  return reply(call, { error: { source: "hearsay", verdict: "deny", message: "denied by the store's rules; do not retry", hits: verdict.hits, proposal } });
 }
 
 // note: notes reach the buyer, so they pass the same checks as a message the desk sends

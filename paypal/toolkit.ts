@@ -6,6 +6,8 @@ import { parseDispute, type ParsedDispute } from "./dispute.ts";
 const CredentialsSchema = z.object({ PAYPAL_CLIENT_ID: z.string().min(1), PAYPAL_CLIENT_SECRET: z.string().min(1) });
 
 export type Toolkit = PayPalAgentToolkit;
+// note: what an agent loop needs, so a guard or a dry run can stand in for the toolkit
+export type ToolCaller = Pick<Toolkit, "getTools" | "handleToolCall">;
 
 export function openToolkit(env: NodeJS.ProcessEnv): Toolkit {
   const credentials = CredentialsSchema.parse(env);
@@ -20,7 +22,7 @@ export function openToolkit(env: NodeJS.ProcessEnv): Toolkit {
   });
 }
 
-export async function fetchDispute(toolkit: Toolkit, disputeId: string): Promise<ParsedDispute> {
+export async function fetchDispute(toolkit: ToolCaller, disputeId: string): Promise<ParsedDispute> {
   const reply = await toolkit.handleToolCall({
     id: `get-${disputeId}`,
     type: "function",

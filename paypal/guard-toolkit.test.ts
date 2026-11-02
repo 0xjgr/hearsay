@@ -27,8 +27,8 @@ function openGuard(name: FixtureName, grants = new GrantBook()) {
   return { guard, call, sent, disputeId, grants };
 }
 
-function firedRules(reply: { error?: { hits?: { rule: string }[] } }): string[] {
-  return (reply.error?.hits ?? []).map((h) => h.rule).sort();
+function firedRules(reply: { hits?: { rule: string }[]; error?: { hits?: { rule: string }[] } }): string[] {
+  return (reply.error?.hits ?? reply.hits ?? []).map((h) => h.rule).sort();
 }
 
 describe("guardToolkit", () => {
@@ -81,7 +81,7 @@ describe("guardToolkit", () => {
   it("holds an accept on a delivered not-received claim for the owner", async () => {
     const { call, sent } = openGuard("dispute-inr-fake-notice.json");
     const reply = await call("accept_dispute_claim", { dispute_id: "BENCH-FAKE-NOTICE" });
-    expect(reply.error.verdict).toBe("ask");
+    expect(reply.status).toBe("held_for_owner");
     expect(firedRules(reply)).toEqual(["hearsay", "record-conflict"]);
     expect(sent).toEqual([]);
   });
@@ -90,19 +90,19 @@ describe("guardToolkit", () => {
     const { call, sent, disputeId, grants } = openGuard("dispute-snad-legit.json");
     const args = { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } };
     const held = await call("create_refund", args);
-    expect(held.error.verdict).toBe("ask");
+    expect(held.status).toBe("held_for_owner");
     expect(firedRules(held)).toEqual(["hearsay"]);
-    grants.grant(disputeId, held.error.proposal);
+    grants.grant(disputeId, held.proposal);
     expect(await call("create_refund", args)).toEqual({ status: "ok" });
-    expect((await call("create_refund", args)).error.verdict).toBe("ask");
+    expect((await call("create_refund", args)).status).toBe("held_for_owner");
     expect(sent).toEqual(["create_refund"]);
   });
 
   it("does not let a grant cover a larger amount", async () => {
     const { call, disputeId, grants } = openGuard("dispute-snad-legit.json");
     const held = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "10.00" } });
-    grants.grant(disputeId, held.error.proposal);
+    grants.grant(disputeId, held.proposal);
     const bigger = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } });
-    expect(bigger.error.verdict).toBe("ask");
+    expect(bigger.status).toBe("held_for_owner");
   });
 });

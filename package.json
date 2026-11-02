@@ -11,6 +11,7 @@
     "fixtures": "node --env-file-if-exists=.env bench/run-fixtures.ts",
     "desk": "node --env-file-if-exists=../.env --env-file-if-exists=.env desk/serve-desk.ts",
     "dispute": "node --env-file-if-exists=../.env --env-file-if-exists=.env paypal/run-dispute.ts",
+    "guard-agent": "node --env-file-if-exists=../.env --env-file-if-exists=.env paypal/run-guarded-agent.ts",
     "ui": "vite desk/ui",
     "build": "vite build desk/ui",
     "judges": "node bench/serve-judges.ts",
