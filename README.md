@@ -116,9 +116,24 @@ pnpm desk & pnpm ui           # http://127.0.0.1:5173
 
 Writes are dry runs unless `DESK_SEND=1`. `pnpm bench` reruns the corpus, `pnpm bench:scores` prints the table.
 
+### Guard an existing PayPal agent
+
+The rules also sit in front of any agent built on `@paypal/agent-toolkit/openai`, with one changed line:
+
+```ts
+const toolkit = guardToolkit(new PayPalAgentToolkit({ clientId, clientSecret, configuration }), {
+  disputeId,            // the one dispute the owner handed the agent
+  store,                // orders, tracking and policy
+  grants: new GrantBook(),
+});
+// toolkit.getTools() and toolkit.handleToolCall(call) work as before
+```
+
+Reads (`get_*`, `list_*`, `show_*`) pass through. `accept_dispute_claim` and `create_refund` are judged before anything is sent: the guard re-reads the dispute, cites each argument itself (an amount is trusted only if PayPal's cap, the dispute amount or the store's order total holds the same figure; a figure found only in buyer text is cited to that text), adds a `tool-scope` rule (the dispute and the capture must be the ones the owner named) and runs the same rules as the desk. A refused call returns a tool message shaped like the toolkit's own errors, with the rules that fired. Every other write tool is refused, because in toolkit 1.11.0 the `actions` configuration only filters `getTools()`: `handleToolCall` runs any method by name. An outside agent cites no store policy, so every money-out it attempts waits for the owner's grant (`paypal/guard-toolkit.ts`).
+
 ## PayPal APIs used
 
-- **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, sandbox): `list_disputes` and `get_dispute` for every read.
+- **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, sandbox): `list_disputes` and `get_dispute` for every read; `guardToolkit()` wraps its `accept_dispute_claim` and `create_refund`.
 - **Disputes API v1** (REST, sandbox): `provide-evidence`, `make-offer`, `accept-claim` and `send-message`, sent only by the executor.
 - Sandbox Resolution Center with test buyer accounts, to open the real disputes the corpus is built from.
 
@@ -129,6 +144,7 @@ Writes are dry runs unless `DESK_SEND=1`. `pnpm bench` reruns the corpus, `pnpm 
 - One transaction per dispute; attachments are not read.
 - The store record is a JSON file standing in for the merchant's order system.
 - `send-message` and `provide-evidence` have been written to the sandbox for real; `accept-claim` and `make-offer` bodies follow the v1 reference and are untested.
+- `guardToolkit()` is tested against a stubbed toolkit, not yet with a live agent loop. In toolkit 1.11.0 the `accept_dispute_claim` schema gives `note` the dispute id pattern (`^[A-Za-z0-9_-]{1,255}$`), so a model that follows the schema cannot write a note with spaces.
 
 ## AI tools used
 
