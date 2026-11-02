@@ -164,6 +164,10 @@ button, input { font: inherit; color: inherit; }
 .board-body .b-sch-event.lane-owner { border-left-color: var(--accent); }
 .board-body .b-sch-event.lane-agent { border-left-color: var(--text); }
 .board-body .b-sch-event.lane-closed { opacity: 0.5; }
+.board-body .b-sch-event.lane-reviewed { border-left-color: var(--muted); }
+.board-body .b-sch-event.verdict-deny { border-left-color: var(--deny); }
+.board-body .b-sch-event.verdict-ask { border-left-color: var(--accent); }
+.board-body .b-sch-event.verdict-allow { border-left-color: var(--text); }
 .board-body .b-sch-event.is-at-risk { background: var(--accent-dim); border-color: var(--accent); }
 /* note: short bars let their label run past the end; lanes hold few disputes, so the space is free */
 .board-body .b-sch-event-wrap, .board-body .b-sch-event, .board-body .b-sch-event-content { overflow: visible; }

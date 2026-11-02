@@ -30,8 +30,8 @@ describe("assignLane", () => {
     expect(assignLane(makeRow({ pending: 1, isStale: true }))).toBe("owner");
   });
 
-  it("puts a read dispute that still waits on the seller with the owner", () => {
-    expect(assignLane(makeRow({ isStale: false }))).toBe("owner");
+  it("puts a judged dispute with nothing to decide on the reviewed lane", () => {
+    expect(assignLane(makeRow({ isStale: false }))).toBe("reviewed");
   });
 
   it("puts a dispute without a seller deadline on the others lane", () => {
@@ -65,5 +65,12 @@ describe("planBoard", () => {
   it("ends an open dispute without a deadline at now", () => {
     const [event] = planBoard([makeRow({ status: "WAITING_FOR_BUYER_RESPONSE", dueAt: undefined })], NOW);
     expect(event?.endDate.toISOString()).toBe(NOW.toISOString());
+  });
+
+  it("names the verdict and the rules that fired on the bar", () => {
+    const latest = { id: "r1", at: "2026-10-26T11:00:00Z", status: "denied" as const, kind: "provide_evidence", verdict: "deny" as const, rules: ["evidence-origin"] };
+    const [event] = planBoard([makeRow({ isStale: false, latest })], NOW);
+    expect(event?.cls).toContain("verdict-deny");
+    expect(event?.name).toContain("deny evidence-origin");
   });
 });

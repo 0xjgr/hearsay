@@ -1,6 +1,7 @@
 import type { LedgerEntry } from "../ledger/ledger-entry.ts";
 import { replayReviews, type ReviewState, type ReviewStatus } from "../ledger/review-state.ts";
 import type { ListedDispute } from "../paypal/toolkit.ts";
+import type { Verdict } from "../policy/verdict.ts";
 
 export type InboxRow = {
   disputeId: string;
@@ -13,7 +14,7 @@ export type InboxRow = {
   // note: newer than the last review means paypal holds something the agent has not read
   isStale: boolean;
   frozen: boolean;
-  latest: { id: string; at: string; status: ReviewStatus; kind: string | undefined } | undefined;
+  latest: { id: string; at: string; status: ReviewStatus; kind: string | undefined; verdict: Verdict["kind"] | undefined; rules: string[] } | undefined;
   pending: number;
 };
 
@@ -40,5 +41,8 @@ export function listInbox(disputes: ListedDispute[], entries: LedgerEntry[], fro
 
 function summarize(state: ReviewState): NonNullable<InboxRow["latest"]> {
   const { review } = state;
-  return { id: review.id, at: review.at, status: state.status, kind: review.outcome === "judged" ? review.proposal.kind : undefined };
+  if (review.outcome !== "judged") return { id: review.id, at: review.at, status: state.status, kind: undefined, verdict: undefined, rules: [] };
+  const { verdict } = review;
+  const rules = verdict.kind === "allow" ? [] : [...new Set(verdict.hits.map((h) => h.rule))];
+  return { id: review.id, at: review.at, status: state.status, kind: review.proposal.kind, verdict: verdict.kind, rules };
 }
