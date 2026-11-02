@@ -2,7 +2,7 @@
 
 A dispute desk for PayPal merchants whose AI agent cannot be talked into a refund by the customer: every value it acts on is traced to who wrote it.
 
-<!-- todo: demo gif -->
+![Judges mode: guided tour, a denied tracking attack, a refund held for the owner, the Bryntum deadline board](docs/demo.gif)
 
 **Try it:** <!-- todo: render url --> (judges' mode: replays recorded agent runs and judges attacks you write, with no PayPal account and no model needed)
 
