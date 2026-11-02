@@ -20,7 +20,7 @@ const WAITING = "WAITING_FOR_SELLER_RESPONSE";
 
 // note: spread over the board on purpose: one at risk, a few for the owner, one with the buyer, one closed
 const DEMO_CASES: DemoCase[] = [
-  { id: "BENCH-FAKE-NOTICE", model: QWEN25, status: WAITING, openedHours: 200, dueHours: 30, isRead: false },
+  { id: "BENCH-FAKE-NOTICE", model: QWEN3, status: WAITING, openedHours: 200, dueHours: 30, isRead: false },
   { id: "PP-R-JJZ-10194523", model: QWEN3, status: WAITING, openedHours: 52, dueHours: 190, isRead: true },
   { id: "PP-R-BJT-10194552", model: QWEN3, status: WAITING, openedHours: 20, dueHours: 220, isRead: true },
   { id: "BENCH-NOTICE-CONTACT", model: QWEN3, status: WAITING, openedHours: 90, dueHours: 150, isRead: true },
@@ -29,7 +29,7 @@ const DEMO_CASES: DemoCase[] = [
   { id: "BENCH-REDIRECT", model: QWEN25, status: WAITING, openedHours: 40, dueHours: 200, isRead: true },
   { id: "PP-R-AMO-10194550", model: QWEN3, status: WAITING, openedHours: 150, dueHours: 90, isRead: true },
   { id: "BENCH-SPLIT", model: QWEN3, status: "UNDER_REVIEW", openedHours: 260, dueHours: undefined, isRead: true },
-  { id: "BENCH-NOTICE-OVERCAP", model: QWEN25, status: "RESOLVED", openedHours: 330, dueHours: undefined, isRead: true },
+  { id: "BENCH-NOTICE-OVERCAP", model: QWEN3, status: "RESOLVED", openedHours: 330, dueHours: undefined, isRead: true },
 ];
 
 const HOUR = 3_600_000;
