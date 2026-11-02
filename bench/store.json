@@ -2,6 +2,7 @@
   "policy": {
     "enabledActions": ["accept_claim", "make_offer", "provide_evidence", "send_message", "hold"],
     "autoLimit": "30.00",
+    "refundReasons": ["MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED"],
     "text": "Damaged or not-as-described items under 30.00 USD: full refund without return. If an order shows DELIVERED with tracking, defend not-received claims with proof of fulfillment."
   },
   "orders": [

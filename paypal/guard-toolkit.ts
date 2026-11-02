@@ -1,7 +1,7 @@
 import type { Store } from "../merchant/store.ts";
 import type { GrantBook } from "../policy/grant-book.ts";
 import { judgeProposal } from "../policy/judge-proposal.ts";
-import type { Proposal } from "../policy/proposal.ts";
+import type { CitedValue, Proposal } from "../policy/proposal.ts";
 import { checkContactOrigin } from "../policy/rules/contact-origin.ts";
 import { checkCustomerScope } from "../policy/rules/customer-scope.ts";
 import { reachVerdict, type RuleHit, type Verdict } from "../policy/verdict.ts";
@@ -43,7 +43,8 @@ async function judgeCall(toolkit: ToolCaller, scope: GuardScope, call: ToolCall,
   const { docket } = buildDocket(fresh.value, scope.store);
   const cited = citeToolCall(tool, call.function.arguments, docket);
   if (!cited.ok) return refuse(call, tool, cited.error);
-  const { proposal, outgoing, hits } = cited.value;
+  const { outgoing, hits } = cited.value;
+  const proposal = { ...cited.value.proposal, because: citePolicy(docket, scope.store) };
   const context = { docket, store: scope.store };
   const verdict = reachVerdict([...hits, ...listHits(judgeProposal(proposal, context)), ...checkOutgoing(outgoing, docket, scope.store)]);
   if (verdict.kind === "allow") {
@@ -67,6 +68,18 @@ async function judgeCall(toolkit: ToolCaller, scope: GuardScope, call: ToolCall,
     });
   }
   return reply(call, { error: { source: "hearsay", verdict: "deny", message: "denied by the store's rules; do not retry", hits: verdict.hits, proposal } });
+}
+
+const STORE_POLICY = "merchant:policy";
+
+// note: the store chose to refund these reasons without asking, as a person on the desk would.
+// the reason is buyer-picked, so only an exact member of paypal's list counts, never free text
+// threat: a buyer who picks a covered reason in bad faith gets what the policy gives that
+// reason, still capped by auto-limit and paypal's refund cap; that is a lie, not an injection
+function citePolicy(docket: Docket, store: Store): CitedValue[] {
+  const reason = docket.segments.find((s) => s.path === "reason")?.text;
+  if (reason === undefined || !store.policy.refundReasons.includes(reason)) return [];
+  return [{ value: findSource(docket, STORE_POLICY) ?? "", cite: STORE_POLICY }];
 }
 
 // note: notes reach the buyer, so they pass the same checks as a message the desk sends

@@ -20,6 +20,9 @@ const StorePolicySchema = z.object({
   // note: money-out above this needs the owner, in the store currency
   autoLimit: z.string(),
   text: z.string(),
+  // note: paypal dispute reasons the store refunds by its own rule; lets the guard cite the
+  // policy for an outside agent that cites nothing, decided by the owner, not by the agent
+  refundReasons: z.array(z.string()).default([]),
 });
 
 export const StoreSchema = z.object({

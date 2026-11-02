@@ -7,7 +7,10 @@ import type { Toolkit } from "./toolkit.ts";
 const store = loadStore();
 const TOOL_NAMES = ["get_dispute", "list_disputes", "accept_dispute_claim", "create_refund", "create_order", "update_shipment_tracking"];
 
-function openGuard(name: FixtureName, grants = new GrantBook()) {
+// note: a store that refunds no reason by policy, so every money-out waits for a grant
+const ASKING_STORE = { ...store, policy: { ...store.policy, refundReasons: [] } };
+
+function openGuard(name: FixtureName, grants = new GrantBook(), guardStore = store) {
   const dispute = loadDispute(name);
   const sent: string[] = [];
   const toolkit = {
@@ -19,7 +22,7 @@ function openGuard(name: FixtureName, grants = new GrantBook()) {
     }),
   } as unknown as Toolkit;
   const disputeId = String((dispute as { dispute_id: string }).dispute_id);
-  const guard = guardToolkit(toolkit, { disputeId, store, grants });
+  const guard = guardToolkit(toolkit, { disputeId, store: guardStore, grants });
   const call = async (name: string, args: object) => {
     const reply = await guard.handleToolCall({ id: "c1", type: "function", function: { name, arguments: JSON.stringify(args) } });
     return JSON.parse(String(reply.content));
@@ -87,7 +90,7 @@ describe("guardToolkit", () => {
   });
 
   it("lets a held refund through once after the owner grants that exact proposal", async () => {
-    const { call, sent, disputeId, grants } = openGuard("dispute-snad-legit.json");
+    const { call, sent, disputeId, grants } = openGuard("dispute-snad-legit.json", new GrantBook(), ASKING_STORE);
     const args = { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } };
     const held = await call("create_refund", args);
     expect(held.status).toBe("held_for_owner");
@@ -99,10 +102,27 @@ describe("guardToolkit", () => {
   });
 
   it("does not let a grant cover a larger amount", async () => {
-    const { call, disputeId, grants } = openGuard("dispute-snad-legit.json");
+    const { call, disputeId, grants } = openGuard("dispute-snad-legit.json", new GrantBook(), ASKING_STORE);
     const held = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "10.00" } });
     grants.grant(disputeId, held.proposal);
     const bigger = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } });
     expect(bigger.status).toBe("held_for_owner");
+  });
+
+  it("sends a refund the store policy covers with no owner step", async () => {
+    const { call, sent } = openGuard("dispute-snad-legit.json");
+    const reply = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } });
+    expect(reply).toEqual({ status: "ok" });
+    expect(sent).toEqual(["create_refund"]);
+  });
+
+  it("still holds a covered reason above the auto limit", async () => {
+    const { call, sent } = openGuard("dispute-snad-legit.json");
+    const reply = await call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } });
+    expect(reply).toEqual({ status: "ok" });
+    const over = openGuard("dispute-snad-legit.json", new GrantBook(), { ...store, policy: { ...store.policy, autoLimit: "10.00" } });
+    expect(firedRules(await over.call("create_refund", { capture_id: "6SB68773HF6867812", amount: { currency_code: "USD", value: "22.00" } }))).toEqual(["auto-limit"]);
+    expect(over.sent).toEqual([]);
+    expect(sent).toEqual(["create_refund"]);
   });
 });
