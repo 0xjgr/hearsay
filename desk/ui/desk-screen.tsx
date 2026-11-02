@@ -6,13 +6,11 @@ import { DeadlineBoard } from "./deadline-board.tsx";
 import { fetchInbox, fetchMode, type Fetched, type Mode } from "./desk-api.ts";
 import { InboxTable } from "./inbox-table.tsx";
 import { JudgesTour } from "./judges-tour.tsx";
-
-type View = "case" | "deadlines" | "bench";
+import { useRoute, type View } from "./desk-route.ts";
 
 export function DeskScreen() {
   const [inbox, setInbox] = useState<Fetched<InboxRow[]> | undefined>(undefined);
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const [view, setView] = useState<View>("case");
+  const [{ view, selectedId }, go] = useRoute();
   const [mode, setMode] = useState<Mode | undefined>(undefined);
 
   const refreshInbox = useCallback(async () => {
@@ -28,18 +26,13 @@ export function DeskScreen() {
 
   const selectedRow = inbox?.ok ? inbox.value.find((r) => r.disputeId === selectedId) : undefined;
 
-  function openCase(disputeId: string) {
-    setSelectedId(disputeId);
-    setView("case");
-  }
+  const openCase = (disputeId: string) => go({ view: "case", selectedId: disputeId });
+  const setView = (next: View) => go({ view: next, selectedId: next === "case" ? selectedId : undefined });
 
   return (
     <div className="desk">
       <header className="masthead">
-        <button className="wordmark" onClick={() => {
-          setSelectedId(undefined);
-          setView("case");
-        }}>
+        <button className="wordmark" onClick={() => go({ view: "case", selectedId: undefined })}>
           hearsay
         </button>
         <span className="masthead-sub">{mode === "judges" ? "dispute desk · hosted demo: recorded agent runs, no paypal and no model behind it" : "dispute desk"}</span>
@@ -62,7 +55,10 @@ export function DeskScreen() {
       ) : (
         <InboxTable inbox={inbox} selectedId={selectedId} onSelect={openCase} onRefresh={refreshInbox} />
       )}
-      {view === "bench" ? null : view === "deadlines" ? (
+      {view === "bench" ? null : mode === undefined ? (
+        // note: a case opened from the url must wait for the mode, or it asks the live desk
+        <main className="case case-empty">Loading...</main>
+      ) : view === "deadlines" ? (
         inbox?.ok ? (
           <DeadlineBoard rows={inbox.value} onOpen={openCase} />
         ) : (

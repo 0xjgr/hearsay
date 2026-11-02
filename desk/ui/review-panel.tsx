@@ -49,8 +49,8 @@ function ExecutionView({ execution }: { execution: Execution }) {
   return (
     <div className="block">
       <h2 className="pane-head">
-        <span>paypal</span>
-        <span className="mono">{execution.kind}</span>
+        <span>to paypal</span>
+        <span className="mono">{execution.kind === "refused" ? "not sent" : execution.kind}</span>
       </h2>
       {execution.kind === "refused" && <p>{execution.reason}</p>}
       {execution.kind === "held" && <p>The agent chose to hold; nothing to send.</p>}
