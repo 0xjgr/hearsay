@@ -1,5 +1,6 @@
 #!/bin/sh
 # note: runs the toolkit agent over the corpus in four configurations; rerun to resume
+set -e
 cd "$(dirname "$0")/.."
 node bench/run-toolkit-corpus.ts --resume
 node bench/run-toolkit-corpus.ts --resume --guard

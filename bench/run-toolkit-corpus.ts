@@ -21,7 +21,11 @@ const store = loadStore();
 const ledger = locateLedger("toolkit");
 
 const isSameConfig = (r: ToolkitRun) => r.model === endpoint.model && r.reasoning === endpoint.reasoning && r.guard === guard;
-const done = new Set(process.argv.includes("--resume") ? readToolkitRuns(ledger).filter(isSameConfig).map((r) => r.caseId) : []);
+// note: a run lost to a dead model server is not a result, so resume works it again
+const isEndpointDown = (error: string | undefined) => error?.startsWith("model endpoint failed") === true;
+const done = new Set(
+  process.argv.includes("--resume") ? readToolkitRuns(ledger).filter((r) => isSameConfig(r) && !isEndpointDown(r.error)).map((r) => r.caseId) : [],
+);
 const cases = buildCorpus().filter((k) => (only === undefined || k.id.includes(only)) && !done.has(k.id));
 console.log(`[bench-toolkit] model=${endpoint.model} reasoning=${endpoint.reasoning} guard=${guard} cases=${cases.length} skipped=${done.size}`);
 
@@ -31,6 +35,10 @@ for (const [n, corpusCase] of cases.entries()) {
   const tools = guard ? guardToolkit(paypal.caller, { disputeId, store, grants: new GrantBook() }) : paypal.caller;
   const started = performance.now();
   const loop = await runToolLoop(tools, endpoint, `Resolve PayPal dispute ${disputeId}.`, () => {});
+  if (!loop.ok && isEndpointDown(loop.error)) {
+    console.log(`[bench-toolkit] stop case=${corpusCase.id} error=${JSON.stringify(loop.error)}`);
+    process.exit(1);
+  }
   const run: ToolkitRun = {
     id: randomUUID(),
     at: new Date().toISOString(),
