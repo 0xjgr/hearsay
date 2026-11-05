@@ -1,5 +1,6 @@
 import type { ReviewState } from "../../ledger/review-state.ts";
 import type { DecisionEntry, ReviewEntry } from "../../ledger/ledger-entry.ts";
+import type { AuditRecord } from "../../bench/audit-bench.ts";
 import type { BenchCase, Replay } from "../../bench/bench-cases.ts";
 import type { Proposal } from "../../policy/proposal.ts";
 import type { Verdict } from "../../policy/verdict.ts";
@@ -72,6 +73,10 @@ export function fetchCases(): Promise<Fetched<BenchCase[]>> {
 
 export function fetchRuns(): Promise<Fetched<Replay[]>> {
   return callDesk("/api/bench/runs");
+}
+
+export function fetchAudit(): Promise<Fetched<AuditRecord>> {
+  return callDesk("/api/bench/audit");
 }
 
 export function judgeAttack(fixture: string, proposal: Proposal): Promise<Fetched<{ proposal: Proposal; verdict: Verdict }>> {

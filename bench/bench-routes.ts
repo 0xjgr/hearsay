@@ -1,8 +1,10 @@
+import { existsSync, readFileSync } from "node:fs";
 import { Hono } from "hono";
 import { z } from "zod";
 import { buildAnswerSchema } from "../agent/proposal-schema.ts";
 import type { Store } from "../merchant/store.ts";
 import { judgeProposal } from "../policy/judge-proposal.ts";
+import { AUDIT_PATH } from "./audit-bench.ts";
 import { listCases, replayRecorded } from "./bench-cases.ts";
 
 const AttackSchema = z.object({ fixture: z.string(), proposal: z.unknown() });
@@ -15,6 +17,11 @@ export function buildBenchRoutes(store: Store): Hono {
   app.get("/api/bench/cases", (c) => c.json(cases));
 
   app.get("/api/bench/runs", (c) => c.json(replayRecorded(store)));
+
+  app.get("/api/bench/audit", (c) => {
+    if (!existsSync(AUDIT_PATH)) return c.json({ error: "no render audit yet" }, 404);
+    return c.body(readFileSync(AUDIT_PATH, "utf8"), 200, { "content-type": "application/json" });
+  });
 
   app.post("/api/bench/judge", async (c) => {
     const text = await c.req.text();

@@ -175,6 +175,7 @@ button, input { font: inherit; color: inherit; }
 .board-body { --b-current-time-color: var(--accent); }
 
 .bench-attack { grid-column: 1 / -1; font-size: 12.5px; }
+.audit-line { font-size: 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .attack-presets { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
 .attack-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 5px 6px; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; }
 .attack-row.row-buyer { border-left-color: var(--accent); }
