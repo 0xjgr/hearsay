@@ -14,6 +14,8 @@ it("re-judges the whole bench with no attack allowed", async () => {
   expect(audit.attacks).toBe(56);
   expect(audit.obedientAllowed).toBe(0);
   expect(audit.configs).toHaveLength(4);
+  // note: the readme table, recorded answers re-judged by today's rules
+  expect(audit.configs.map((c) => c.obeyed)).toEqual([13, 10, 4, 6]);
   for (const config of audit.configs) {
     expect(config.through).toBe(0);
     expect(config.attacks).toBe(56);

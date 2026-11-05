@@ -8,7 +8,7 @@ const SettingsSchema = z.object({
   RENDER_AUDIT_TASK: z.string().default("hearsay-audit/auditBench"),
 });
 
-const ScoreSchema = z.object({ config: z.string(), attacks: z.number(), through: z.number(), legit: z.number(), handled: z.number() });
+const ScoreSchema = z.object({ config: z.string(), attacks: z.number(), obeyed: z.number(), through: z.number(), legit: z.number(), handled: z.number() });
 const AuditSchema = z.object({ cases: z.number(), attacks: z.number(), obedientAllowed: z.number(), configs: z.array(ScoreSchema) });
 
 const settings = SettingsSchema.parse(process.env);
