@@ -64,5 +64,6 @@ function labelEvent(row: InboxRow, isAtRisk: boolean): string {
   const verdict = row.latest?.verdict === undefined ? "" : ` · ${row.latest.verdict}${named}`;
   // note: the owner lane already says a decision waits, so the bar does not repeat it
   const flags = [isAtRisk ? "at risk" : "", row.frozen ? "frozen" : ""].filter((f) => f !== "");
-  return `${row.disputeId} · ${row.amount ?? "-"}${due}${verdict}${flags.length > 0 ? ` · ${flags.join(" · ")}` : ""}`;
+  // note: the dispute id lives in the tooltip; the bar keeps what decides the next step
+  return `${row.amount ?? "-"}${due}${verdict}${flags.length > 0 ? ` · ${flags.join(" · ")}` : ""}`;
 }

@@ -1,8 +1,7 @@
 import type { InboxRow } from "../list-inbox.ts";
 import type { Fetched } from "./desk-api.ts";
-import { describeDue, KIND_WORDS, labelReason } from "./plain-words.ts";
+import { describeDue, labelReason } from "./plain-words.ts";
 import { StatusMark } from "./status-mark.tsx";
-import type { ProposalKind } from "../../policy/proposal.ts";
 
 type InboxProps = {
   inbox: Fetched<InboxRow[]> | undefined;
@@ -11,7 +10,7 @@ type InboxProps = {
   onRefresh: () => void;
 };
 
-type Group = { id: string; title: string; hint: string; rows: InboxRow[] };
+type Group = { id: string; title: string; rows: InboxRow[] };
 
 export function InboxTable({ inbox, selectedId, onSelect, onRefresh }: InboxProps) {
   const now = new Date();
@@ -32,7 +31,6 @@ export function InboxTable({ inbox, selectedId, onSelect, onRefresh }: InboxProp
             <h3 className="group-head">
               {group.title} <span className="group-count">{group.rows.length}</span>
             </h3>
-            <p className="group-hint">{group.hint}</p>
             <ol>
               {group.rows.map((row) => (
                 <li key={row.disputeId}>
@@ -47,20 +45,30 @@ export function InboxTable({ inbox, selectedId, onSelect, onRefresh }: InboxProp
 }
 
 function InboxCard({ row, now, isSelected, onSelect }: { row: InboxRow; now: Date; isSelected: boolean; onSelect: (id: string) => void }) {
-  const due = row.status === "RESOLVED" ? undefined : describeDue(row.dueAt, now);
-  const kind = row.latest?.kind as ProposalKind | undefined;
   return (
-    <button className={`inbox-card tone-${toneOf(row)}${isSelected ? " is-selected" : ""}`} onClick={() => onSelect(row.disputeId)}>
+    <button className={`inbox-card tone-${toneOf(row)}${isSelected ? " is-selected" : ""}`} onClick={() => onSelect(row.disputeId)} title={row.disputeId}>
       <span className="card-amount">{row.amount ?? "-"}</span>
       <StatusMark status={row.latest?.status} />
       <span className="card-reason">{labelReason(row.reason)}</span>
-      <span className="card-id">{row.disputeId}</span>
-      <span className="card-line">
-        {kind === undefined ? (row.latest === undefined ? "The agent has not read it" : "The agent failed to answer") : `Agent: ${KIND_WORDS[kind].toLowerCase()}`}
-      </span>
-      {due && <span className={`card-due${due.isUrgent ? " is-urgent" : ""}`}>{due.text}</span>}
-      {row.status === "RESOLVED" && <span className="card-due">Closed by PayPal</span>}
+      {row.status === "RESOLVED" ? <span className="card-due">Closed</span> : <DueBar row={row} now={now} />}
     </button>
+  );
+}
+
+// note: the bar empties as paypal's response window runs out
+function DueBar({ row, now }: { row: InboxRow; now: Date }) {
+  const due = describeDue(row.dueAt, now);
+  if (due === undefined || row.dueAt === undefined) return <span className="card-due">No deadline</span>;
+  const total = Date.parse(row.dueAt) - Date.parse(row.createdAt);
+  const left = Math.max(0, Math.min(1, (Date.parse(row.dueAt) - now.getTime()) / total));
+  const days = Math.max(0, Math.ceil((Date.parse(row.dueAt) - now.getTime()) / 86_400_000));
+  return (
+    <span className={`card-due${due.isUrgent ? " is-urgent" : ""}`} title={due.text}>
+      <span className="due-bar">
+        <span style={{ width: `${Math.round(left * 100)}%` }} />
+      </span>
+      {days === 0 ? "today" : `${days}d`}
+    </span>
   );
 }
 
@@ -69,11 +77,11 @@ function groupForTriage(rows: InboxRow[]): Group[] {
   const byDue = (a: InboxRow, b: InboxRow) => (a.dueAt ?? "9").localeCompare(b.dueAt ?? "9");
   const open = rows.filter((r) => r.status !== "RESOLVED");
   const groups: Group[] = [
-    { id: "owner", title: "Needs your decision", hint: "The rules held these for you.", rows: open.filter((r) => r.pending > 0) },
-    { id: "unread", title: "Not read yet", hint: "Run the agent to get a proposal.", rows: open.filter((r) => r.pending === 0 && r.latest === undefined) },
-    { id: "denied", title: "Blocked by the rules", hint: "The agent was talked into something.", rows: open.filter((r) => r.pending === 0 && r.latest?.verdict === "deny") },
-    { id: "settled", title: "Handled", hint: "Allowed with no owner step.", rows: open.filter((r) => r.pending === 0 && r.latest !== undefined && r.latest.verdict !== "deny") },
-    { id: "closed", title: "Closed", hint: "PayPal has decided.", rows: rows.filter((r) => r.status === "RESOLVED") },
+    { id: "owner", title: "Needs your decision", rows: open.filter((r) => r.pending > 0) },
+    { id: "unread", title: "Not read yet", rows: open.filter((r) => r.pending === 0 && r.latest === undefined) },
+    { id: "denied", title: "Blocked by the rules", rows: open.filter((r) => r.pending === 0 && r.latest?.verdict === "deny") },
+    { id: "settled", title: "Handled", rows: open.filter((r) => r.pending === 0 && r.latest !== undefined && r.latest.verdict !== "deny") },
+    { id: "closed", title: "Closed", rows: rows.filter((r) => r.status === "RESOLVED") },
   ];
   return groups.filter((g) => g.rows.length > 0).map((g) => ({ ...g, rows: [...g.rows].sort(byDue) }));
 }

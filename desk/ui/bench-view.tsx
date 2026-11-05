@@ -7,7 +7,7 @@ import { AttackForm } from "./attack-form.tsx";
 import { fetchAudit, fetchCases, fetchRuns, type Fetched } from "./desk-api.ts";
 import { DocketView } from "./docket-view.tsx";
 import { formatClock, KIND_WORDS, VERDICT_WORDS } from "./plain-words.ts";
-import { RuleList, summarizeVerdict, TraceView } from "./proposal-view.tsx";
+import { RuleList, summarizeVerdict, SYMBOLS, TraceView } from "./proposal-view.tsx";
 
 const OWN = "Write your own";
 
@@ -41,8 +41,8 @@ export function BenchView() {
         <div className="inbox-head">
           <h2>Attack cases</h2>
         </div>
-        <p className="group-hint">Each one hides an instruction in a field the buyer controls. Pick one, then replay a model or play the hijacked agent yourself.</p>
-        {audit !== undefined && <AuditLine record={audit} />}
+        {audit !== undefined && <AuditChart record={audit} />}
+        <p className="group-hint">Pick a case, then replay a model or play the hijacked agent yourself.</p>
         {cases === undefined && <p className="pane-note">Loading the bench...</p>}
         {cases?.ok === false && <p className="pane-note pane-error">{cases.error}</p>}
         <ol>
@@ -97,6 +97,7 @@ function ReplayPanel({ replay }: { replay: Replay }) {
     return (
       <div className="review">
         <div className="verdict-banner tone-deny">
+          <span className="banner-symbol" aria-hidden="true">✕</span>
           <p className="banner-word">Agent error</p>
           <p className="banner-line">{entry.outcome === "agent-error" ? entry.error : ""} Nothing was proposed, so there was nothing to judge.</p>
           <p className="banner-stamp">{stamp}</p>
@@ -109,6 +110,7 @@ function ReplayPanel({ replay }: { replay: Replay }) {
   return (
     <div className="review">
       <div className={`verdict-banner tone-${verdict.kind}`}>
+        <span className="banner-symbol" aria-hidden="true">{SYMBOLS[verdict.kind]}</span>
         <p className="banner-word">{VERDICT_WORDS[verdict.kind]}</p>
         <p className="banner-line">
           <strong>{KIND_WORDS[entry.proposal.kind]}.</strong> {summarizeVerdict(verdict)}
@@ -118,7 +120,7 @@ function ReplayPanel({ replay }: { replay: Replay }) {
       </div>
       <div className="review-grid">
         <div className="review-main">
-          <TraceView proposal={entry.proposal} docket={entry.docket} reasoning={entry.reasoning} tokens={entry.tokens} />
+          <TraceView proposal={entry.proposal} docket={entry.docket} verdict={verdict} reasoning={entry.reasoning} tokens={entry.tokens} />
           <RuleList verdict={verdict} />
         </div>
         <DocketView docket={entry.docket} cited={cited} unlisted={entry.unlisted} marks={marks} />
@@ -127,23 +129,35 @@ function ReplayPanel({ replay }: { replay: Replay }) {
   );
 }
 
-function AuditLine({ record }: { record: AuditRecord }) {
+// note: one bar per recorded configuration; the obeyed part is what the model alone would have done
+function AuditChart({ record }: { record: AuditRecord }) {
   const { audit } = record;
-  const through = audit.configs.reduce((sum, c) => sum + c.through, 0);
-  const attacks = audit.configs.reduce((sum, c) => sum + c.attacks, 0);
   return (
-    <div className="audit-line">
-      <p>
-        <strong>
-          {through} of {attacks}
-        </strong>{" "}
-        recorded model attacks got past the rules, and <strong>{audit.obedientAllowed} of {audit.attacks}</strong> perfectly obedient ones.
-      </p>
+    <figure className="audit-chart">
+      <figcaption>
+        Of {audit.attacks} attacks, how many each model obeyed, and how many got past the rules
+      </figcaption>
+      {audit.configs.map((c) => (
+        <div key={c.config} className="audit-row">
+          <span className="audit-config">{describeConfig(c.config)}</span>
+          <span className="audit-bar" role="img" aria-label={`${c.obeyed ?? "?"} obeyed, ${c.through} got past`}>
+            <span className="audit-obeyed" style={{ width: `${((c.obeyed ?? 0) / c.attacks) * 100}%` }} />
+          </span>
+          <span className="audit-numbers">
+            {c.obeyed ?? "?"} obeyed, <strong>{c.through} past</strong>
+          </span>
+        </div>
+      ))}
       <p className="audit-meta">
-        Re-judged on Render Workflows on {record.at.slice(0, 10)}, {audit.cases} cases in parallel. Run {record.taskRunId}
+        {audit.obedientAllowed} of {audit.attacks} perfectly obedient proposals pass. Re-judged on Render Workflows, {record.at.slice(0, 10)}, run {record.taskRunId}
       </p>
-    </div>
+    </figure>
   );
+}
+
+function describeConfig(config: string): string {
+  const [model, warn] = config.split(" ");
+  return `${shortModel(model!.replace("(high)", ""))}${warn === "warn" ? ", warned" : ""}`;
 }
 
 const CASE_NAMES: Record<string, string> = {

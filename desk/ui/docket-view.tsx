@@ -1,32 +1,41 @@
 import { Fragment } from "react";
 import { renderDocket } from "../../agent/render-docket.ts";
 import type { Citation, Docket, Segment } from "../../provenance/author.ts";
-import { highlight } from "./proposal-view.tsx";
+import { hasInstruction, markText } from "./mark-text.tsx";
 import { labelCitation, labelField } from "./plain-words.ts";
+import type { Focus } from "./proposal-view.tsx";
 import { AuthorTag } from "./status-mark.tsx";
 
-type DocketProps = { docket: Docket; cited: ReadonlySet<Citation>; unlisted: string[]; marks?: string[] };
+type DocketProps = { docket: Docket; cited: ReadonlySet<Citation>; unlisted: string[]; marks?: string[]; focus?: Focus };
 
 // note: free text the buyer typed comes first; values picked from a list are the least dangerous
 const LOUD = [/messages\[\d+\]\.content$/, /evidences\[\d+\]\.notes$/, /items\[\d+\]\.notes$/, /item_name$/, /item_description$/, /buyer\.name$/, /buyer_requested_amount\.value$/];
 
-export function DocketView({ docket, cited, unlisted, marks = [] }: DocketProps) {
-  const loud = docket.segments.filter((s) => LOUD.some((p) => p.test(s.path)));
-  const quiet = docket.segments.filter((s) => !loud.includes(s));
+// note: the same text typed into two fields is shown once, under both names
+type Field = { text: string; segments: Segment[] };
+
+export function DocketView({ docket, cited, unlisted, marks = [], focus }: DocketProps) {
+  const loud = groupByText(docket.segments.filter((s) => LOUD.some((p) => p.test(s.path))));
+  const quiet = docket.segments.filter((s) => !LOUD.some((p) => p.test(s.path)));
+  const hasInjection = loud.some((f) => hasInstruction(f.text));
   return (
     <section className="statement">
       <h2 className="section-head">
         What the buyer wrote <AuthorTag author="buyer" />
       </h2>
-      <p className="statement-note">Anyone who paid the store can open a dispute and type here. The agent reads it; the rules never trust it.</p>
+      {hasInjection && (
+        <p className="statement-note">
+          Text <mark className="mark-inject">underlined in red</mark> reads like an order to the agent. A simple pattern finds it; the rules never rely on it.
+        </p>
+      )}
       <ol className="statement-fields">
-        {loud.map((segment) => (
-          <BuyerField key={segment.id} segment={segment} isCited={cited.has(segment.id)} marks={marks} />
+        {loud.map((field) => (
+          <BuyerField key={field.segments[0]!.id} field={field} cited={cited} marks={marks} focus={focus} />
         ))}
       </ol>
       {quiet.length > 0 && (
-        <div className="statement-picked">
-          <h3>Also picked or attached by the buyer</h3>
+        <details className="statement-picked" open={quiet.some((s) => cited.has(s.id))}>
+          <summary>{quiet.length} more fields the buyer picked or attached</summary>
           <dl className="picked-list">
             {quiet.map((s) => (
               <Fragment key={s.id}>
@@ -35,29 +44,34 @@ export function DocketView({ docket, cited, unlisted, marks = [] }: DocketProps)
               </Fragment>
             ))}
           </dl>
-        </div>
+        </details>
       )}
       <DocketDetails docket={docket} cited={cited} unlisted={unlisted} />
     </section>
   );
 }
 
-function BuyerField({ segment, isCited, marks }: { segment: Segment; isCited: boolean; marks: string[] }) {
-  const mark = marks.find((m) => m.trim().length > 1 && segment.text.includes(m.trim()));
+function BuyerField({ field, cited, marks, focus }: { field: Field; cited: ReadonlySet<Citation>; marks: string[]; focus: Focus | undefined }) {
+  const ids = field.segments.map((s) => s.id);
+  const isCited = ids.some((id) => cited.has(id));
+  const isFocused = focus?.cite !== undefined && ids.includes(focus.cite as Segment["id"]);
   return (
-    <li className={`buyer-field${isCited ? " is-cited" : ""}`}>
+    <li
+      className={`buyer-field${isCited ? " is-cited" : ""}${isFocused ? " is-focused" : ""}`}
+      onMouseEnter={() => isCited && focus?.onFocus(ids.find((id) => cited.has(id)))}
+      onMouseLeave={() => focus?.onFocus(undefined)}
+    >
       <span className="buyer-field-head">
-        {labelField(segment.path)}
-        <span className="seg-id">{segment.id}</span>
+        {[...new Set(field.segments.map((s) => labelField(s.path)))].join(" and ")}
         {isCited && <span className="cited-flag">Used by the agent</span>}
       </span>
       {/* threat: buyer text is rendered as text, never as markup */}
-      <blockquote className="buyer-voice">{mark === undefined ? segment.text : highlight(segment.text, mark)}</blockquote>
+      <blockquote className="buyer-voice">{markText(field.text, isCited ? marks : [])}</blockquote>
     </li>
   );
 }
 
-function DocketDetails({ docket, cited, unlisted }: Omit<DocketProps, "marks">) {
+function DocketDetails({ docket, cited, unlisted }: Omit<DocketProps, "marks" | "focus">) {
   const seen = new Set(renderDocket(docket).citable);
   return (
     <details className="details">
@@ -86,6 +100,16 @@ function DocketDetails({ docket, cited, unlisted }: Omit<DocketProps, "marks">) 
       )}
     </details>
   );
+}
+
+function groupByText(segments: Segment[]): Field[] {
+  const fields: Field[] = [];
+  for (const segment of segments) {
+    const same = fields.find((f) => f.text.trim() === segment.text.trim());
+    if (same) same.segments.push(segment);
+    else fields.push({ text: segment.text, segments: [segment] });
+  }
+  return fields;
 }
 
 function shorten(text: string): string {

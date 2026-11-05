@@ -7,18 +7,20 @@ import { isSegmentId, type Citation } from "../../provenance/author.ts";
 import { approve, reject } from "./desk-api.ts";
 import { DocketView } from "./docket-view.tsx";
 import { formatClock, KIND_WORDS, VERDICT_WORDS } from "./plain-words.ts";
-import { RuleList, summarizeVerdict, TraceView } from "./proposal-view.tsx";
+import { RuleList, summarizeVerdict, SYMBOLS, TraceView } from "./proposal-view.tsx";
 
 type PanelProps = { state: ReviewState; onDecided: () => Promise<void> };
 
 export function ReviewPanel({ state, onDecided }: PanelProps) {
   const { review } = state;
+  const [focused, setFocused] = useState<Citation | undefined>(undefined);
   const stamp = `${review.outcome === "judged" && review.proposer === "operator" ? "Written by you" : `Proposed by ${review.run.model}`}, ${formatClock(review.at)}${review.outcome === "judged" && review.seconds !== undefined ? `, ${review.seconds.toFixed(0)} s` : ""}`;
 
   if (review.outcome === "agent-error") {
     return (
       <div className="review">
         <div className="verdict-banner tone-deny">
+          <span className="banner-symbol" aria-hidden="true">✕</span>
           <p className="banner-word">Agent error</p>
           <p className="banner-line">The model gave no usable answer, so nothing was proposed and nothing reached PayPal.</p>
           <p className="banner-stamp">{stamp}</p>
@@ -30,11 +32,13 @@ export function ReviewPanel({ state, onDecided }: PanelProps) {
   }
 
   const cited = new Set<Citation>(citationsOf(review));
+  const focus = { cite: focused, onFocus: setFocused };
   const marks = [...listParameters(review.proposal), ...review.proposal.because].filter((v) => isSegmentId(v.cite)).map((v) => v.value);
 
   return (
     <div className="review">
       <div className={`verdict-banner tone-${review.verdict.kind}`}>
+        <span className="banner-symbol" aria-hidden="true">{SYMBOLS[review.verdict.kind]}</span>
         <p className="banner-word">{VERDICT_WORDS[review.verdict.kind]}</p>
         <p className="banner-line">
           <strong>{KIND_WORDS[review.proposal.kind]}{amountOf(review)}.</strong> {summarizeVerdict(review.verdict)}
@@ -45,10 +49,10 @@ export function ReviewPanel({ state, onDecided }: PanelProps) {
       </div>
       <div className="review-grid">
         <div className="review-main">
-          <TraceView proposal={review.proposal} docket={review.docket} reasoning={review.reasoning} tokens={review.tokens} />
+          <TraceView proposal={review.proposal} docket={review.docket} verdict={review.verdict} focus={focus} reasoning={review.reasoning} tokens={review.tokens} />
           <RuleList verdict={review.verdict} />
         </div>
-        <DocketView docket={review.docket} cited={cited} unlisted={review.unlisted} marks={marks} />
+        <DocketView docket={review.docket} cited={cited} unlisted={review.unlisted} marks={marks} focus={focus} />
       </div>
     </div>
   );
