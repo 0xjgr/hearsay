@@ -1,4 +1,4 @@
-# note: the judges server only, with no paypal credentials and no model behind it
+# note: the judges server and the bench audit; neither holds paypal credentials or a model
 services:
   - type: web
     name: hearsay-bench
@@ -11,3 +11,11 @@ services:
     envVars:
       - key: JUDGES_HOST
         value: 0.0.0.0
+
+  # note: re-judges the whole bench in parallel task runs; no model, no paypal, cents per run
+  - type: workflow
+    name: hearsay-audit
+    runtime: node
+    region: oregon
+    buildCommand: npx -y pnpm@12.16.1 install --frozen-lockfile --prod
+    startCommand: node bench/render-audit.ts
