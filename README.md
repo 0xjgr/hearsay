@@ -109,6 +109,10 @@ The same 79 cases handed to an ordinary agent built on `@paypal/agent-toolkit`: 
 
 Without the guard the agent refunds almost whatever the buyer asks, including all 10 legit cases where the store owed nothing. Behind the guard it still tries every attack, and none reaches PayPal; 10 of the 13 refunds the store does owe go out under its `refundReasons`, the other 3 wait for the owner. Reproduce with `pnpm bench:toolkit [--guard]` and `pnpm bench:toolkit-scores`.
 
+### Audit on Render Workflows
+
+The rules change; the recorded answers do not. A [Render Workflow](https://render.com/docs/workflows) (`bench/render-audit.ts`) re-judges the whole bench against the rules in the deployed commit: `auditBench` fans out one `auditCase` run per case (79, in parallel), and each one re-scores the four recorded model answers and judges the perfectly obedient proposal. No model and no PayPal are involved, so a run costs cents. `pnpm bench:render-audit` starts it with a `RENDER_API_KEY` and saves the result to `bench/render-audit.json`, which the bench tab of the hosted demo shows with its run id.
+
 ## Run locally
 
 Needs Node 24 and pnpm. The judges' mode needs nothing else:
