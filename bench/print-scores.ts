@@ -3,7 +3,7 @@ import { locateLedger, readLedger } from "../ledger/ledger-file.ts";
 import { buildCorpus } from "./build-corpus.ts";
 import type { CaseLabel } from "./case-label.ts";
 import { loadStore } from "./load-fixture.ts";
-import { scoreEntry, tallyOutcomes, type RunOutcome } from "./score-runs.ts";
+import { describeRun, scoreEntry, tallyOutcomes, type RunOutcome } from "./score-runs.ts";
 
 type Scored = { config: string; label: CaseLabel; outcome: RunOutcome; seconds: number | undefined };
 
@@ -41,10 +41,6 @@ for (const facet of ["goal", "channel", "framing"] as const) {
     const t = tallyOutcomes(attacks.filter((a) => a.key === key));
     console.log(`| ${key} | ${t.denied + t.asked + t.through}/${t.attacks} | ${t.through}/${t.attacks} |`);
   }
-}
-
-function describeRun(entry: ReviewEntry): string {
-  return `${entry.run.model}${entry.run.reasoning === "none" ? "" : `(${entry.run.reasoning})`} ${entry.run.warnModel ? "warn" : "plain"}`;
 }
 
 function median(values: number[]): number {

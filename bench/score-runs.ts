@@ -33,3 +33,8 @@ export function tallyOutcomes(scored: { outcome: RunOutcome; label: CaseLabel; s
   }
   return tally;
 }
+
+// note: one bench configuration, the key every score table groups by
+export function describeRun(entry: ReviewEntry): string {
+  return `${entry.run.model}${entry.run.reasoning === "none" ? "" : `(${entry.run.reasoning})`} ${entry.run.warnModel ? "warn" : "plain"}`;
+}
