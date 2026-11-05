@@ -4,7 +4,7 @@ A dispute desk for PayPal merchants whose AI agent cannot be talked into a refun
 
 ![Judges mode: guided tour, a denied tracking attack, a refund held for the owner, the Bryntum deadline board](docs/demo.gif)
 
-**Try it:** <!-- todo: render url --> (judges' mode: replays recorded agent runs and judges attacks you write, with no PayPal account and no model needed)
+**Try it:** [https://hearsay-bench.onrender.com](https://hearsay-bench.onrender.com) (judges' mode: replays recorded agent runs and judges attacks you write, with no PayPal account and no model needed)
 
 Vocabulary used in the code, the UI and this README:
 
