@@ -29,6 +29,7 @@
     "@bryntum/scheduler-react": "7.3.7",
     "@fontsource/ibm-plex-mono": "5.3.0",
     "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/source-serif-4": "5.2.9",
     "@hono/node-server": "2.1.4",
     "@paypal/agent-toolkit": "1.11.0",
     "@renderinc/sdk": "1.7.0",

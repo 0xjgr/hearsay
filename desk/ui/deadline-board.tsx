@@ -1,5 +1,5 @@
 import "@bryntum/scheduler/scheduler.css";
-import "@bryntum/scheduler/svalbard-dark.css";
+import "@bryntum/scheduler/svalbard-light.css";
 import "@bryntum/scheduler/fontawesome/css/fontawesome.css";
 import "@bryntum/scheduler/fontawesome/css/solid.css";
 import { BryntumScheduler } from "@bryntum/scheduler-react";
@@ -19,12 +19,11 @@ export function DeadlineBoard({ rows, onOpen }: BoardProps) {
 
   return (
     <section className="board">
-      <div className="pane-head board-head">
-        <span>seller response deadlines</span>
-        <span className="pane-count">{events.length}</span>
-        {atRisk > 0 && <span className="mark mark-ask">{atRisk} at risk: unread with under two days left</span>}
-        <span className="legend-note">bars run from the opening of the dispute to the day paypal stops waiting for the seller</span>
-      </div>
+      <header className="board-head">
+        <h1>Response deadlines</h1>
+        {atRisk > 0 && <span className="mark mark-deny">{atRisk} at risk: not read, under two days left</span>}
+        <p>Each bar runs from the day the buyer opened the dispute to the day PayPal stops waiting for you. Click a bar to open it.</p>
+      </header>
       <div className="board-body">
         <BryntumScheduler
           readOnly
@@ -34,7 +33,7 @@ export function DeadlineBoard({ rows, onOpen }: BoardProps) {
           rowHeight={64}
           barMargin={8}
           eventStyle="filled"
-          columns={[{ text: "lane", field: "name", width: 210 }]}
+          columns={[{ text: "Who acts next", field: "name", width: 200 }]}
           resources={LANES}
           events={events}
           timeRangesFeature={{ showCurrentTimeLine: true }}

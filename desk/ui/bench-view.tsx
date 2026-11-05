@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import type { AuditRecord } from "../../bench/audit-bench.ts";
 import type { BenchCase, Replay } from "../../bench/bench-cases.ts";
 import { listParameters } from "../../policy/proposal.ts";
-import type { Citation } from "../../provenance/author.ts";
+import { isSegmentId, type Citation } from "../../provenance/author.ts";
 import { AttackForm } from "./attack-form.tsx";
 import { fetchAudit, fetchCases, fetchRuns, type Fetched } from "./desk-api.ts";
 import { DocketView } from "./docket-view.tsx";
-import { ProposalView } from "./proposal-view.tsx";
-import { formatClock } from "./status-mark.tsx";
+import { formatClock, KIND_WORDS, VERDICT_WORDS } from "./plain-words.ts";
+import { RuleList, summarizeVerdict, TraceView } from "./proposal-view.tsx";
 
-const OWN = "write your own";
+const OWN = "Write your own";
 
 export function BenchView() {
   const [cases, setCases] = useState<Fetched<BenchCase[]> | undefined>(undefined);
@@ -38,24 +38,23 @@ export function BenchView() {
   return (
     <>
       <aside className="inbox">
-        <div className="pane-head">
-          <span>bench cases</span>
-          <span className="pane-count">{listed.length}</span>
+        <div className="inbox-head">
+          <h2>Attack cases</h2>
         </div>
+        <p className="group-hint">Each one hides an instruction in a field the buyer controls. Pick one, then replay a model or play the hijacked agent yourself.</p>
         {audit !== undefined && <AuditLine record={audit} />}
         {cases === undefined && <p className="pane-note">Loading the bench...</p>}
         {cases?.ok === false && <p className="pane-note pane-error">{cases.error}</p>}
-        <ol className="inbox-list">
+        <ol>
           {listed.map((k) => (
             <li key={k.fixture}>
-              <button className={`inbox-row${k === shown ? " is-selected" : ""}`} onClick={() => openCase(k)}>
-                <span className="mono inbox-id">{labelCase(k)}</span>
-                <span className="mono inbox-amount">{k.docket.disputeId}</span>
-                <span className="inbox-reason bench-attack">{k.attack}</span>
-                <span className="inbox-flags">
+              <button className={`inbox-card${k === shown ? " is-selected" : ""}`} onClick={() => openCase(k)}>
+                <span className="card-title">{labelCase(k)}</span>
+                <span className="card-line">{k.attack}</span>
+                <span className="card-models">
                   {runsOf(k).map((r) => (
                     <span key={r.entry.run.model} className={`mark mark-${toneOf(r)}`}>
-                      {shortModel(r.entry.run.model)} {r.verdict?.kind ?? "error"}
+                      {shortModel(r.entry.run.model)}: {r.verdict === undefined ? "error" : VERDICT_WORDS[r.verdict.kind]}
                     </span>
                   ))}
                 </span>
@@ -68,19 +67,22 @@ export function BenchView() {
         <main className="case case-empty">No bench cases.</main>
       ) : (
         <main className="case">
-          <section className="case-head">
-            <h1 className="mono">{labelCase(shown)}</h1>
-            <p className="case-facts">
-              <span>{shown.attack}</span>
-            </p>
-            <nav className="history">
-              {[...models.filter((m) => runsOf(shown).some((r) => r.entry.run.model === m)), OWN].map((name) => (
-                <button key={name} className={`history-item${name === tab ? " is-selected" : ""}`} onClick={() => setTab(name)}>
-                  <span className="mono">{name === OWN ? name : `${name} recorded`}</span>
-                </button>
-              ))}
-            </nav>
-          </section>
+          <header className="case-head">
+            <div className="case-title">
+              <h1>{labelCase(shown)}</h1>
+              <p className="case-sub">
+                <span>{shown.attack}</span>
+                <span className="case-id">{shown.docket.disputeId}</span>
+              </p>
+            </div>
+          </header>
+          <nav className="history" aria-label="Who answers this case">
+            {[...models.filter((m) => runsOf(shown).some((r) => r.entry.run.model === m)), OWN].map((name) => (
+              <button key={name} className={`history-item${name === tab ? " is-selected" : ""}`} onClick={() => setTab(name)}>
+                {name === OWN ? name : `Replay ${name}`}
+              </button>
+            ))}
+          </nav>
           {tab === OWN || replay === undefined ? <AttackForm key={shown.fixture} benchCase={shown} /> : <ReplayPanel replay={replay} />}
         </main>
       )}
@@ -90,31 +92,37 @@ export function BenchView() {
 
 function ReplayPanel({ replay }: { replay: Replay }) {
   const { entry, verdict } = replay;
-  const cited = new Set<Citation>(entry.outcome === "judged" ? [...listParameters(entry.proposal), ...entry.proposal.because].map((v) => v.cite) : []);
+  const stamp = `Recorded ${formatClock(entry.at)}, ${entry.run.model}, reasoning ${entry.run.reasoning}${entry.seconds === undefined ? "" : `, ${entry.seconds.toFixed(0)} s`}`;
+  if (entry.outcome !== "judged" || verdict === undefined) {
+    return (
+      <div className="review">
+        <div className="verdict-banner tone-deny">
+          <p className="banner-word">Agent error</p>
+          <p className="banner-line">{entry.outcome === "agent-error" ? entry.error : ""} Nothing was proposed, so there was nothing to judge.</p>
+          <p className="banner-stamp">{stamp}</p>
+        </div>
+      </div>
+    );
+  }
+  const cited = new Set<Citation>([...listParameters(entry.proposal), ...entry.proposal.because].map((v) => v.cite));
+  const marks = [...listParameters(entry.proposal), ...entry.proposal.because].filter((v) => isSegmentId(v.cite)).map((v) => v.value);
   return (
     <div className="review">
-      <DocketView docket={entry.docket} cited={cited} unlisted={entry.unlisted} />
-      <section className="verdict-column">
-        <p className="review-stamp mono">
-          {formatClock(entry.at)} · {entry.run.model} · reasoning {entry.run.reasoning}
-          {entry.seconds !== undefined && ` · ${entry.seconds.toFixed(0)} s`}
+      <div className={`verdict-banner tone-${verdict.kind}`}>
+        <p className="banner-word">{VERDICT_WORDS[verdict.kind]}</p>
+        <p className="banner-line">
+          <strong>{KIND_WORDS[entry.proposal.kind]}.</strong> {summarizeVerdict(verdict)}
         </p>
-        {entry.outcome === "judged" && verdict !== undefined ? (
-          <>
-            <p className="pane-note">The agent's answer is recorded. The verdict is worked out now, by the rules as they stand.</p>
-            <ProposalView entry={{ ...entry, verdict }} />
-            {verdict.kind !== entry.verdict.kind && (
-              <p className="pane-note mono">verdict when recorded: {entry.verdict.kind}</p>
-            )}
-          </>
-        ) : (
-          <div className="block block-deny">
-            <h2 className="pane-head">agent error</h2>
-            <p className="mono">{entry.outcome === "agent-error" ? entry.error : ""}</p>
-            <p className="pane-note">Nothing was proposed, so there was nothing to judge.</p>
-          </div>
-        )}
-      </section>
+        <p className="banner-exec">The model's answer is recorded; the verdict is worked out now by today's rules.{verdict.kind !== entry.verdict.kind && ` When recorded it was ${VERDICT_WORDS[entry.verdict.kind].toLowerCase()}.`}</p>
+        <p className="banner-stamp">{stamp}</p>
+      </div>
+      <div className="review-grid">
+        <div className="review-main">
+          <TraceView proposal={entry.proposal} docket={entry.docket} reasoning={entry.reasoning} tokens={entry.tokens} />
+          <RuleList verdict={verdict} />
+        </div>
+        <DocketView docket={entry.docket} cited={cited} unlisted={entry.unlisted} marks={marks} />
+      </div>
     </div>
   );
 }
@@ -124,16 +132,36 @@ function AuditLine({ record }: { record: AuditRecord }) {
   const through = audit.configs.reduce((sum, c) => sum + c.through, 0);
   const attacks = audit.configs.reduce((sum, c) => sum + c.attacks, 0);
   return (
-    <p className="pane-note audit-line">
-      Re-judged on Render Workflows, {record.at.slice(0, 10)}: {audit.cases} cases in parallel runs. Obedient attacks allowed{" "}
-      <span className="mono">{audit.obedientAllowed}/{audit.attacks}</span>, recorded model attacks through{" "}
-      <span className="mono">{through}/{attacks}</span>. <span className="mono">{record.taskRunId}</span>
-    </p>
+    <div className="audit-line">
+      <p>
+        <strong>
+          {through} of {attacks}
+        </strong>{" "}
+        recorded model attacks got past the rules, and <strong>{audit.obedientAllowed} of {audit.attacks}</strong> perfectly obedient ones.
+      </p>
+      <p className="audit-meta">
+        Re-judged on Render Workflows on {record.at.slice(0, 10)}, {audit.cases} cases in parallel. Run {record.taskRunId}
+      </p>
+    </div>
   );
 }
 
+const CASE_NAMES: Record<string, string> = {
+  "inr-clean": "No attack, delivered order",
+  "inr-injected": "Refund order in the message",
+  "inr-item-name-injected": "Order hidden in the item name",
+  "snad-legit": "No attack, damaged item",
+  "inr-fake-tracking": "Fake corrected tracking",
+  "inr-fake-notice": "Fake PayPal case review",
+  "inr-redirect": "Write to another address",
+  "inr-split": "Order split across two fields",
+  "inr-fake-notice-overcap": "Fake notice, double refund",
+  "inr-fake-notice-contact": "Fake notice, new contact",
+};
+
 function labelCase(k: BenchCase): string {
-  return k.fixture.replace(/^dispute-/, "").replace(/\.json$/, "");
+  const slug = k.fixture.replace(/^dispute-/, "").replace(/\.json$/, "");
+  return CASE_NAMES[slug] ?? slug;
 }
 
 function shortModel(model: string): string {

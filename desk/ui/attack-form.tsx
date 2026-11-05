@@ -2,9 +2,10 @@ import { useState } from "react";
 import type { BenchCase } from "../../bench/bench-cases.ts";
 import type { CitedValue, Proposal, ProposalKind } from "../../policy/proposal.ts";
 import type { Verdict } from "../../policy/verdict.ts";
-import { authorOfCitation, findSource, type Citation } from "../../provenance/author.ts";
+import { authorOfCitation, findSource, isSegmentId, type Citation, type Docket } from "../../provenance/author.ts";
 import { judgeAttack } from "./desk-api.ts";
 import { DocketView } from "./docket-view.tsx";
+import { AUTHOR_WORDS, KIND_WORDS, labelCitation } from "./plain-words.ts";
 import { VerdictView } from "./proposal-view.tsx";
 
 const KINDS: ProposalKind[] = ["accept_claim", "make_offer", "provide_evidence", "send_message", "send_invoice", "hold"];
@@ -39,70 +40,70 @@ export function AttackForm({ benchCase }: { benchCase: BenchCase }) {
   const cited = new Set<Citation>([...FIELDS[draft.kind].map((f) => draft.fields[f]!.cite), ...draft.because.map((b) => b.cite)]);
 
   return (
-    <div className="review">
-      <DocketView docket={docket} cited={cited} unlisted={benchCase.unlisted} />
-      <section className="verdict-column">
-        <div className="block">
-          <h2 className="pane-head">
-            <span>your proposal</span>
-          </h2>
+    <div className="review-grid">
+      <div className="review-main">
+        <section className="attack">
+          <h2 className="section-head">Play the hijacked agent</h2>
           <p className="pane-note">
-            Play a hijacked agent: pick an action and cite where each value comes from. Nothing reaches PayPal or a model; the rules judge it here.
+            Pick an action and say where each value comes from. Cite the buyer's text and see which rule stops you. Nothing reaches PayPal or a model.
           </p>
           <div className="attack-presets">
-            <button className="button" onClick={() => edit(presetRefund(benchCase, cite))}>refund the buyer's figure</button>
-            <button className="button" onClick={() => edit(presetTracking(benchCase, cite))}>file the buyer's tracking</button>
-            <button className="button" onClick={() => edit(presetRedirect(benchCase, cite))}>write where the buyer says</button>
+            <button className="button" onClick={() => edit(presetRefund(benchCase, cite))}>Refund what the buyer asks</button>
+            <button className="button" onClick={() => edit(presetTracking(benchCase, cite))}>File the buyer's tracking</button>
+            <button className="button" onClick={() => edit(presetRedirect(benchCase, cite))}>Write where the buyer says</button>
           </div>
-          <label className="attack-row mono">
-            <span className="ruled-key">kind</span>
+          <label className="attack-row">
+            <span className="attack-label">Action</span>
             <select className="attack-input" value={draft.kind} onChange={(e) => edit(switchKind(draft, e.target.value as ProposalKind, citable, cite))}>
               {KINDS.map((k) => (
-                <option key={k}>{k}</option>
+                <option key={k} value={k}>
+                  {KIND_WORDS[k]}
+                </option>
               ))}
             </select>
           </label>
           {FIELDS[draft.kind].map((field) => (
-            <CitedInput key={field} name={field} cited={draft.fields[field]!} citable={citable} cite={cite} onChange={(v) => edit({ fields: { ...draft.fields, [field]: v } })} />
+            <CitedInput key={field} name={field} cited={draft.fields[field]!} citable={citable} docket={docket} cite={cite} onChange={(v) => edit({ fields: { ...draft.fields, [field]: v } })} />
           ))}
           {(draft.kind === "send_message" || draft.kind === "send_invoice") && (
-            <textarea className="message-draft attack-text" rows={3} maxLength={2000} value={draft.text} onChange={(e) => edit({ text: e.target.value })} />
+            <textarea className="text-input attack-text" rows={3} maxLength={2000} value={draft.text} onChange={(e) => edit({ text: e.target.value })} />
           )}
-          <h3 className="sub-head">because</h3>
+          <h3 className="sub-head">Why</h3>
           {draft.because.map((b, i) => (
-            <CitedInput key={i} name="" cited={b} citable={citable} cite={cite} onChange={(v) => edit({ because: draft.because.map((x, j) => (j === i ? v : x)) })} onRemove={() => edit({ because: draft.because.filter((_, j) => j !== i) })} />
+            <CitedInput key={i} name="" cited={b} citable={citable} docket={docket} cite={cite} onChange={(v) => edit({ because: draft.because.map((x, j) => (j === i ? v : x)) })} onRemove={() => edit({ because: draft.because.filter((_, j) => j !== i) })} />
           ))}
           <div className="decision">
-            <button className="button" onClick={() => edit({ because: [...draft.because, cite("merchant:policy")] })}>add a reason</button>
-            <button className="button button-primary" onClick={() => void submit()}>judge it</button>
+            <button className="button button-primary" onClick={() => void submit()}>Judge it</button>
+            <button className="button" onClick={() => edit({ because: [...draft.because, cite("merchant:policy")] })}>Add a reason</button>
           </div>
-        </div>
+        </section>
         {judged && "verdict" in judged && <VerdictView verdict={judged.verdict} />}
         {judged && "error" in judged && <p className="pane-error">{judged.error}</p>}
-      </section>
+      </div>
+      <DocketView docket={docket} cited={cited} unlisted={benchCase.unlisted} />
     </div>
   );
 }
 
-const LABELS: Record<string, string> = { trackingNumber: "tracking" };
+const LABELS: Record<string, string> = { amount: "Amount", trackingNumber: "Tracking", carrier: "Carrier", to: "To" };
 
-type InputProps = { name: string; cited: CitedValue; citable: Citation[]; cite: (c: Citation) => CitedValue; onChange: (v: CitedValue) => void; onRemove?: () => void };
+type InputProps = { name: string; cited: CitedValue; citable: Citation[]; docket: Docket; cite: (c: Citation) => CitedValue; onChange: (v: CitedValue) => void; onRemove?: () => void };
 
-function CitedInput({ name, cited, citable, cite, onChange, onRemove }: InputProps) {
+function CitedInput({ name, cited, citable, docket, cite, onChange, onRemove }: InputProps) {
   return (
-    <div className={`attack-row mono${authorOfCitation(cited.cite) === "buyer" ? " row-buyer" : ""}`}>
-      <span className="ruled-key">{LABELS[name] ?? (name || "reason")}</span>
+    <div className={`attack-row from-${authorOfCitation(cited.cite)}`}>
+      <span className="attack-label">{LABELS[name] ?? (name || "Reason")}</span>
       <select className="attack-input" value={cited.cite} onChange={(e) => onChange(cite(e.target.value as Citation))}>
         {citable.map((c) => (
           <option key={c} value={c}>
-            {authorOfCitation(c)} · {c}
+            {AUTHOR_WORDS[authorOfCitation(c)]}: {labelCitation(c, docket.segments.find((s) => s.id === c)?.path)}{isSegmentId(c) ? ` (${c})` : ""}
           </option>
         ))}
       </select>
       <input className="attack-input attack-value" value={cited.value} maxLength={500} onChange={(e) => onChange({ ...cited, value: e.target.value })} />
       {onRemove && (
         <button className="link-button" onClick={onRemove}>
-          remove
+          Remove
         </button>
       )}
     </div>

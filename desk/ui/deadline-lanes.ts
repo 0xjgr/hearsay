@@ -3,11 +3,11 @@ import type { InboxRow } from "../list-inbox.ts";
 export type Lane = "owner" | "agent" | "reviewed" | "others" | "closed";
 
 export const LANES: { id: Lane; name: string }[] = [
-  { id: "owner", name: "owner decides" },
-  { id: "agent", name: "agent has not read" },
-  { id: "reviewed", name: "judged, no owner step" },
-  { id: "others", name: "buyer or paypal" },
-  { id: "closed", name: "closed" },
+  { id: "owner", name: "You decide" },
+  { id: "agent", name: "Agent has not read it" },
+  { id: "reviewed", name: "Settled by the rules" },
+  { id: "others", name: "Buyer or PayPal" },
+  { id: "closed", name: "Closed" },
 ];
 
 export type BoardEvent = {

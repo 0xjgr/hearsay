@@ -3,40 +3,53 @@ import type { JudgedEntry } from "../../ledger/ledger-entry.ts";
 import { canDecide, type ReviewState } from "../../ledger/review-state.ts";
 import type { Execution } from "../../paypal/execute-proposal.ts";
 import { listParameters } from "../../policy/proposal.ts";
-import type { Citation } from "../../provenance/author.ts";
+import { isSegmentId, type Citation } from "../../provenance/author.ts";
 import { approve, reject } from "./desk-api.ts";
 import { DocketView } from "./docket-view.tsx";
-import { ProposalView } from "./proposal-view.tsx";
-import { formatClock, StatusMark } from "./status-mark.tsx";
+import { formatClock, KIND_WORDS, VERDICT_WORDS } from "./plain-words.ts";
+import { RuleList, summarizeVerdict, TraceView } from "./proposal-view.tsx";
 
 type PanelProps = { state: ReviewState; onDecided: () => Promise<void> };
 
 export function ReviewPanel({ state, onDecided }: PanelProps) {
   const { review } = state;
-  const cited = new Set<Citation>(review.outcome === "judged" ? citationsOf(review) : []);
+  const stamp = `${review.outcome === "judged" && review.proposer === "operator" ? "Written by you" : `Proposed by ${review.run.model}`}, ${formatClock(review.at)}${review.outcome === "judged" && review.seconds !== undefined ? `, ${review.seconds.toFixed(0)} s` : ""}`;
+
+  if (review.outcome === "agent-error") {
+    return (
+      <div className="review">
+        <div className="verdict-banner tone-deny">
+          <p className="banner-word">Agent error</p>
+          <p className="banner-line">The model gave no usable answer, so nothing was proposed and nothing reached PayPal.</p>
+          <p className="banner-stamp">{stamp}</p>
+        </div>
+        <pre className="error-text">{review.error}</pre>
+        <DocketView docket={review.docket} cited={new Set()} unlisted={review.unlisted} />
+      </div>
+    );
+  }
+
+  const cited = new Set<Citation>(citationsOf(review));
+  const marks = [...listParameters(review.proposal), ...review.proposal.because].filter((v) => isSegmentId(v.cite)).map((v) => v.value);
 
   return (
     <div className="review">
-      <DocketView docket={review.docket} cited={cited} unlisted={review.unlisted} />
-      <section className="verdict-column">
-        <p className="review-stamp mono">
-          {formatClock(review.at)} · {review.run.model} · reasoning {review.run.reasoning}
-          {review.outcome === "judged" && review.seconds !== undefined && ` · ${review.seconds.toFixed(0)} s`}
+      <div className={`verdict-banner tone-${review.verdict.kind}`}>
+        <p className="banner-word">{VERDICT_WORDS[review.verdict.kind]}</p>
+        <p className="banner-line">
+          <strong>{KIND_WORDS[review.proposal.kind]}{amountOf(review)}.</strong> {summarizeVerdict(review.verdict)}
         </p>
-        {review.outcome === "agent-error" ? (
-          <div className="block block-deny">
-            <h2 className="pane-head">agent error</h2>
-            <p className="mono">{review.error}</p>
-            <p className="pane-note">Nothing was proposed, so nothing reached PayPal.</p>
-          </div>
-        ) : (
-          <>
-            <ProposalView entry={review} />
-            <ExecutionView execution={review.execution} />
-            <DecisionBar state={state} onDecided={onDecided} />
-          </>
-        )}
-      </section>
+        <ExecutionLine execution={review.execution} />
+        <DecisionBar state={state} onDecided={onDecided} />
+        <p className="banner-stamp">{stamp}</p>
+      </div>
+      <div className="review-grid">
+        <div className="review-main">
+          <TraceView proposal={review.proposal} docket={review.docket} reasoning={review.reasoning} tokens={review.tokens} />
+          <RuleList verdict={review.verdict} />
+        </div>
+        <DocketView docket={review.docket} cited={cited} unlisted={review.unlisted} marks={marks} />
+      </div>
     </div>
   );
 }
@@ -45,24 +58,20 @@ function citationsOf({ proposal }: JudgedEntry): Citation[] {
   return [...listParameters(proposal), ...proposal.because].map((v) => v.cite);
 }
 
-function ExecutionView({ execution }: { execution: Execution }) {
-  return (
-    <div className="block">
-      <h2 className="pane-head">
-        <span>to paypal</span>
-        <span className="mono">{execution.kind === "refused" ? "not sent" : execution.kind}</span>
-      </h2>
-      {execution.kind === "refused" && <p>{execution.reason}</p>}
-      {execution.kind === "held" && <p>The agent chose to hold; nothing to send.</p>}
-      {"request" in execution && (
-        <p className="mono">
-          POST {execution.request.path}
-          {"status" in execution && ` → ${execution.status}`}
-        </p>
-      )}
-      {execution.kind === "dry-run" && <p className="pane-note">Dry run: nothing reached PayPal (DESK_SEND=0, a frozen dispute, or the hosted demo).</p>}
-    </div>
-  );
+function amountOf({ proposal, docket }: JudgedEntry): string {
+  const currency = docket.facts.find((f) => f.key === "paypal:dispute_amount.currency_code")?.value ?? "";
+  if (proposal.kind === "accept_claim" || proposal.kind === "make_offer" || proposal.kind === "send_invoice") return `: ${proposal.amount.value} ${currency}`.trimEnd();
+  if (proposal.kind === "provide_evidence") return `: ${proposal.trackingNumber.value}`;
+  if (proposal.kind === "send_message") return ` at ${proposal.to.value}`;
+  return "";
+}
+
+function ExecutionLine({ execution }: { execution: Execution }) {
+  if (execution.kind === "refused") return <p className="banner-exec">Not sent to PayPal: {execution.reason}.</p>;
+  if (execution.kind === "held") return <p className="banner-exec">The agent chose to wait, so there is nothing to send.</p>;
+  if (execution.kind === "dry-run") return <p className="banner-exec">Demo: the request was built but not sent to PayPal.</p>;
+  if (execution.kind === "failed") return <p className="banner-exec">PayPal refused POST {execution.request.path} with {execution.status}.</p>;
+  return <p className="banner-exec">Sent to PayPal: POST {execution.request.path}, answered {execution.status}.</p>;
 }
 
 function DecisionBar({ state, onDecided }: PanelProps) {
@@ -82,30 +91,26 @@ function DecisionBar({ state, onDecided }: PanelProps) {
   }
 
   return (
-    <div className="block">
-      <h2 className="pane-head">
-        <span>owner</span>
-        <StatusMark status={state.status} />
-      </h2>
+    <>
       {state.decisions.map((d) => (
-        <p key={d.id} className="mono">
-          {formatClock(d.at)} {d.outcome}
-          {d.outcome === "approved" ? ` → ${d.execution.kind}` : d.note ? ` "${d.note}"` : ""}
+        <p key={d.id} className="banner-exec">
+          {d.outcome === "approved" ? "You approved it" : "You rejected it"} on {formatClock(d.at)}
+          {d.outcome === "approved" ? `; the send was a ${d.execution.kind}.` : d.note ? `: "${d.note}"` : "."}
         </p>
       ))}
       {canDecide(state.status) && (
         <div className="decision">
           {/* threat: one click must not move money; approving takes a second, deliberate one */}
-          <button className="button button-primary" disabled={busy} onClick={() => (armed ? void decide("approve") : setArmed(true))}>
-            {armed ? "confirm: re-read, re-judge, send" : "approve"}
+          <button className="button button-approve" disabled={busy} onClick={() => (armed ? void decide("approve") : setArmed(true))}>
+            {armed ? "Confirm: re-read, re-judge, send" : "Approve"}
           </button>
-          <input className="message-draft" placeholder="note (optional)" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
           <button className="button" disabled={busy} onClick={() => void decide("reject")}>
-            reject
+            Reject
           </button>
+          <input className="text-input" placeholder="Note for the record (optional)" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
         </div>
       )}
       {error && <p className="pane-error">{error}</p>}
-    </div>
+    </>
   );
 }

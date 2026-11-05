@@ -8,6 +8,12 @@ import { InboxTable } from "./inbox-table.tsx";
 import { JudgesTour } from "./judges-tour.tsx";
 import { useRoute, type View } from "./desk-route.ts";
 
+const VIEWS: [View, string][] = [
+  ["case", "Disputes"],
+  ["deadlines", "Deadlines"],
+  ["bench", "Try an attack"],
+];
+
 export function DeskScreen() {
   const [inbox, setInbox] = useState<Fetched<InboxRow[]> | undefined>(undefined);
   const [{ view, selectedId }, go] = useRoute();
@@ -33,21 +39,20 @@ export function DeskScreen() {
     <div className="desk">
       <header className="masthead">
         <button className="wordmark" onClick={() => go({ view: "case", selectedId: undefined })}>
-          hearsay
+          Hearsay
         </button>
-        <span className="masthead-sub">{mode === "judges" ? "dispute desk · hosted demo: recorded agent runs, no paypal and no model behind it" : "dispute desk"}</span>
-        <nav className="views">
-          {(["case", "deadlines", "bench"] as const).map((v) => (
-            <button key={v} className={`view-tab${view === v ? " is-selected" : ""}`} onClick={() => setView(v)}>
-              {v}
+        <nav className="views" aria-label="Views">
+          {VIEWS.map(([v, label]) => (
+            <button key={v} className={`view-tab${view === v ? " is-selected" : ""}`} aria-current={view === v ? "page" : undefined} onClick={() => setView(v)}>
+              {label}
             </button>
           ))}
         </nav>
-        <span className="legend">
-          <span className="tag tag-buyer">buyer</span>
-          <span className="tag tag-paypal">paypal</span>
-          <span className="tag tag-merchant">merchant</span>
-          <span className="legend-note">who wrote each value</span>
+        {mode === "judges" && <span className="demo-note">Demo with recorded runs. Nothing here reaches PayPal.</span>}
+        <span className="legend" aria-label="Who wrote each value">
+          <span className="tag tag-buyer">Buyer</span>
+          <span className="tag tag-paypal">PayPal</span>
+          <span className="tag tag-merchant">Merchant</span>
         </span>
       </header>
       {view === "bench" ? (
@@ -67,7 +72,7 @@ export function DeskScreen() {
       ) : selectedId === undefined && mode === "judges" && inbox?.ok ? (
         <JudgesTour rows={inbox.value} onOpen={openCase} onBench={() => setView("bench")} onDeadlines={() => setView("deadlines")} />
       ) : selectedId === undefined ? (
-        <main className="case case-empty">Pick a dispute from the inbox.</main>
+        <main className="case case-empty">Pick a dispute on the left.</main>
       ) : (
         <CaseView key={selectedId} disputeId={selectedId} row={selectedRow} onLedgerChange={refreshInbox} />
       )}
