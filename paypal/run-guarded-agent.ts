@@ -8,18 +8,32 @@ import { GrantBook } from "../policy/grant-book.ts";
 import { guardToolkit } from "./guard-toolkit.ts";
 import type { ToolCaller } from "./toolkit.ts";
 
-// usage: pnpm guard-agent <dispute_id> [--bare]
-// a toolkit agent works one live sandbox dispute behind guardToolkit; writes never leave
-// this process, the dry layer only records what would have been sent
-const { values, positionals } = parseArgs({ allowPositionals: true, options: { bare: { type: "boolean", default: false } } });
+// usage: pnpm guard-agent <dispute_id> [--bare | --send]
+// a toolkit agent works one live sandbox dispute behind guardToolkit. by default writes never
+// leave this process: the dry layer only records what would have been sent. --send lets the
+// writes the guard allows reach the sandbox
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: { bare: { type: "boolean", default: false }, send: { type: "boolean", default: false } },
+});
 const disputeId = positionals[0];
 if (disputeId === undefined) {
-  console.log("[guard-agent] usage: pnpm guard-agent <dispute_id> [--bare]");
+  console.log("[guard-agent] usage: pnpm guard-agent <dispute_id> [--bare | --send]");
   process.exit(2);
 }
 
-const CredentialsSchema = z.object({ PAYPAL_CLIENT_ID: z.string().min(1), PAYPAL_CLIENT_SECRET: z.string().min(1) });
-const credentials = CredentialsSchema.parse(process.env);
+const SettingsSchema = z.object({
+  PAYPAL_CLIENT_ID: z.string().min(1),
+  PAYPAL_CLIENT_SECRET: z.string().min(1),
+  DESK_FROZEN: z.string().default(""),
+});
+const credentials = SettingsSchema.parse(process.env);
+const frozen = credentials.DESK_FROZEN.split(",").map((id) => id.trim());
+// threat: an unguarded agent with live writes, or a live write on a demo dispute
+if (values.send && (values.bare || frozen.includes(disputeId))) {
+  console.log(`[guard-agent] refuse --send dispute=${disputeId} ${values.bare ? "without the guard" : "is frozen for the demo"}`);
+  process.exit(2);
+}
 const toolkit = new PayPalAgentToolkit({
   clientId: credentials.PAYPAL_CLIENT_ID,
   clientSecret: credentials.PAYPAL_CLIENT_SECRET,
@@ -32,9 +46,10 @@ const toolkit = new PayPalAgentToolkit({
 
 const dry = openDryRun(toolkit);
 // note: --bare shows what the same agent does with no guard, still through the dry layer
-const tools = values.bare ? dry.caller : guardToolkit(dry.caller, { disputeId, store: loadStore(), grants: new GrantBook() });
+const inner = values.send ? toolkit : dry.caller;
+const tools = values.bare ? dry.caller : guardToolkit(inner, { disputeId, store: loadStore(), grants: new GrantBook() });
 const endpoint = readModelEndpoint(process.env);
-console.log(`[guard-agent] dispute=${disputeId} model=${endpoint.model} guard=${values.bare ? "off" : "on"}`);
+console.log(`[guard-agent] dispute=${disputeId} model=${endpoint.model} guard=${values.bare ? "off" : "on"} writes=${values.send ? "live" : "dry"}`);
 
 const run = await runToolLoop(tools, endpoint, `Resolve PayPal dispute ${disputeId}.`, (step) => {
   console.log(`[agent] ${step.tool} ${step.arguments}`);
