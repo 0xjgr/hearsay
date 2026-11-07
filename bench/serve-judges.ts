@@ -27,6 +27,11 @@ app.get("/api/mode", (c) => c.json({ mode: "judges" }));
 // note: built per request so the recorded disputes always sit around today on the board
 app.get("/api/demo/desk", (c) => c.json(buildDemoDesk(corpus, recorded, store, new Date())));
 app.all("/api/*", (c) => c.json({ error: "not on the judges server" }, 404));
+// note: vite puts a content hash in every asset name, so they never change under a url
+app.use("/assets/*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "public, max-age=31536000, immutable");
+});
 app.use("/*", serveStatic({ root: "./desk/ui/dist" }));
 app.get("/*", serveStatic({ path: "./desk/ui/dist/index.html" }));
 

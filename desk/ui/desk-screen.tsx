@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import type { InboxRow } from "../list-inbox.ts";
 import { BenchView } from "./bench-view.tsx";
 import { CaseView } from "./case-view.tsx";
-import { DeadlineBoard } from "./deadline-board.tsx";
 import { fetchInbox, fetchMode, type Fetched, type Mode } from "./desk-api.ts";
 import { InboxTable } from "./inbox-table.tsx";
 import { JudgesTour } from "./judges-tour.tsx";
 import { useRoute, type View } from "./desk-route.ts";
+
+// note: bryntum is most of the bundle; the home page and cases load without it
+const loadBoard = () => import("./deadline-board.tsx").then((m) => ({ default: m.DeadlineBoard }));
+const DeadlineBoard = lazy(loadBoard);
+setTimeout(() => void loadBoard(), 1500);
 
 const VIEWS: [View, string][] = [
   ["case", "Disputes"],
@@ -65,7 +69,9 @@ export function DeskScreen() {
         <main className="case case-empty">Loading...</main>
       ) : view === "deadlines" ? (
         inbox?.ok ? (
-          <DeadlineBoard rows={inbox.value} onOpen={openCase} />
+          <Suspense fallback={<main className="case case-empty">Loading the board...</main>}>
+            <DeadlineBoard rows={inbox.value} onOpen={openCase} />
+          </Suspense>
         ) : (
           <main className="case case-empty">The board needs the inbox first.</main>
         )
