@@ -160,6 +160,11 @@ Live run, Nov 2, `pnpm guard-agent <dispute_id> [--bare]`: a plain toolkit agent
 
 In both guarded runs the agent's final answer says the refund was made. The guard's log, not the agent's summary, is the record.
 
+Live writes, Nov 7, on two new sandbox disputes opened for this:
+
+- PP-R-BVL (cracked mug, not as described, 18.00 USD), `pnpm guard-agent PP-R-BVL-10197044 --send`: the store refunds that reason under 30.00 USD, so the guard allows `accept_dispute_claim` and the toolkit sends it. The first try came back `422 INSUFFICIENT_FUNDS` (the sandbox seller held no USD); after a top-up the same call was accepted and PayPal resolved the dispute.
+- PP-R-QWV (tote bag never shipped, 26.00 USD), `pnpm desk` with `DESK_SEND=1`: the desk agent proposes a full refund citing the order status; no store policy covers it, so it waits for the owner (`hearsay`). Approved in the desk: re-read, re-judged, sent through the executor's `accept-claim`, answered 200, dispute resolved.
+
 ## PayPal APIs used
 
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, sandbox): `list_disputes` and `get_dispute` for every read; `guardToolkit()` wraps its `accept_dispute_claim` and `create_refund`.
@@ -173,8 +178,8 @@ In both guarded runs the agent's final answer says the refund was made. The guar
 - The webhook listener is covered by tests against PayPal's verify contract but has not yet received a live sandbox notification; polling (`DESK_POLL_SECONDS`) stays as the fallback.
 - One transaction per dispute; attachments are not read.
 - The store record is a JSON file standing in for the merchant's order system.
-- `send-message` and `provide-evidence` have been written to the sandbox for real; `accept-claim` and `make-offer` bodies follow the v1 reference and are untested.
-- `guardToolkit()` has run with a live toolkit agent on sandbox disputes, but only through a dry layer: no write it allowed has reached PayPal yet. In toolkit 1.11.0 the `accept_dispute_claim` schema gives `note` the dispute id pattern (`^[A-Za-z0-9_-]{1,255}$`), so a model that follows the schema cannot write a note with spaces.
+- `send-message`, `provide-evidence` and `accept-claim` have been written to the sandbox for real; the `make-offer` body follows the v1 reference and is untested.
+- `guardToolkit()` has sent one allowed write to PayPal (PP-R-BVL above); its `create_refund` path has only run through the dry layer. In toolkit 1.11.0 the `accept_dispute_claim` schema gives `note` the dispute id pattern (`^[A-Za-z0-9_-]{1,255}$`); qwen3 wrote a note with spaces anyway and PayPal took it, but a model that follows the schema strictly cannot.
 
 ## AI tools used
 
