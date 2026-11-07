@@ -46,7 +46,8 @@ const toolkit = new PayPalAgentToolkit({
 
 const dry = openDryRun(toolkit);
 // note: --bare shows what the same agent does with no guard, still through the dry layer
-const inner = values.send ? toolkit : dry.caller;
+const live = openLiveLog(toolkit);
+const inner = values.send ? live.caller : dry.caller;
 const tools = values.bare ? dry.caller : guardToolkit(inner, { disputeId, store: loadStore(), grants: new GrantBook() });
 const endpoint = readModelEndpoint(process.env);
 console.log(`[guard-agent] dispute=${disputeId} model=${endpoint.model} guard=${values.bare ? "off" : "on"} writes=${values.send ? "live" : "dry"}`);
@@ -60,7 +61,8 @@ if (!run.ok) {
   console.log(`[guard-agent] error ${run.error}`);
   process.exit(1);
 }
-console.log(`[guard-agent] answer ${JSON.stringify(run.answer)} would_send=${dry.wouldSend.length}`);
+const tally = values.send ? `sent=${live.sent.length}` : `would_send=${dry.wouldSend.length}`;
+console.log(`[guard-agent] answer ${JSON.stringify(run.answer)} ${tally}`);
 
 // threat: a live sandbox write from a demo run; reads go through, every other call stops here
 function openDryRun(inner: ToolCaller): { caller: ToolCaller; wouldSend: string[] } {
@@ -74,4 +76,17 @@ function openDryRun(inner: ToolCaller): { caller: ToolCaller; wouldSend: string[
     },
   };
   return { caller, wouldSend };
+}
+
+// note: in live mode the closing line counts what reached paypal, not what a dry run held back
+function openLiveLog(inner: ToolCaller): { caller: ToolCaller; sent: string[] } {
+  const sent: string[] = [];
+  const caller: ToolCaller = {
+    getTools: () => inner.getTools(),
+    handleToolCall: async (call) => {
+      if (!/^(get|list|show)_/.test(call.function.name)) sent.push(call.function.name);
+      return inner.handleToolCall(call);
+    },
+  };
+  return { caller, sent };
 }
