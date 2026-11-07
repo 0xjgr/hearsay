@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { JudgedEntry } from "../../ledger/ledger-entry.ts";
 import { canDecide, type ReviewState } from "../../ledger/review-state.ts";
 import type { Execution } from "../../paypal/execute-proposal.ts";
+import type { Verdict } from "../../policy/verdict.ts";
 import { listParameters } from "../../policy/proposal.ts";
 import { isSegmentId, type Citation } from "../../provenance/author.ts";
 import { approve, reject } from "./desk-api.ts";
@@ -34,16 +35,17 @@ export function ReviewPanel({ state, onDecided }: PanelProps) {
   const cited = new Set<Citation>(citationsOf(review));
   const focus = { cite: focused, onFocus: setFocused };
   const marks = [...listParameters(review.proposal), ...review.proposal.because].filter((v) => isSegmentId(v.cite)).map((v) => v.value);
+  const banner = bannerOf(review, state);
 
   return (
     <div className="review">
-      <div className={`verdict-banner tone-${review.verdict.kind}`}>
-        <span className="banner-symbol" aria-hidden="true">{SYMBOLS[review.verdict.kind]}</span>
-        <p className="banner-word">{VERDICT_WORDS[review.verdict.kind]}</p>
+      <div className={`verdict-banner tone-${banner.tone}`}>
+        <span className="banner-symbol" aria-hidden="true">{SYMBOLS[banner.tone]}</span>
+        <p className="banner-word">{banner.word}</p>
         <p className="banner-line">
-          <strong>{KIND_WORDS[review.proposal.kind]}{amountOf(review)}.</strong> {summarizeVerdict(review.verdict)}
+          <strong>{KIND_WORDS[review.proposal.kind]}{amountOf(review)}.</strong> {state.decisions.length === 0 ? summarizeVerdict(review.verdict) : `The rules held it for you: ${heldBy(review.verdict)}.`}
         </p>
-        <ExecutionLine execution={review.execution} />
+        {state.decisions.length === 0 && <ExecutionLine execution={review.execution} />}
         <DecisionBar state={state} onDecided={onDecided} />
         <p className="banner-stamp">{stamp}</p>
       </div>
@@ -56,6 +58,18 @@ export function ReviewPanel({ state, onDecided }: PanelProps) {
       </div>
     </div>
   );
+}
+
+// note: once the owner decides, the banner shows the decision; the rules that fired stay below
+function bannerOf(review: JudgedEntry, { decisions }: ReviewState): { tone: Verdict["kind"]; word: string } {
+  const last = decisions.at(-1);
+  if (last?.outcome === "approved") return { tone: "allow", word: last.execution.kind === "sent" ? "Approved and sent" : "Approved" };
+  if (last?.outcome === "rejected") return { tone: "deny", word: "Rejected" };
+  return { tone: review.verdict.kind, word: VERDICT_WORDS[review.verdict.kind] };
+}
+
+function heldBy(verdict: Verdict): string {
+  return verdict.kind === "allow" ? "none" : verdict.hits.map((h) => h.rule).join(", ");
 }
 
 function citationsOf({ proposal }: JudgedEntry): Citation[] {
@@ -76,6 +90,20 @@ function ExecutionLine({ execution }: { execution: Execution }) {
   if (execution.kind === "dry-run") return <p className="banner-exec">Demo: the request was built but not sent to PayPal.</p>;
   if (execution.kind === "failed") return <p className="banner-exec">PayPal refused POST {execution.request.path} with {execution.status}.</p>;
   return <p className="banner-exec">Sent to PayPal: POST {execution.request.path}, answered {execution.status}.</p>;
+}
+
+function describeSend(execution: Execution): string {
+  if (execution.kind === "dry-run") return "re-read, re-judged and built; sending is off here, so nothing reached PayPal";
+  if (execution.kind === "sent") return `sent to PayPal, answered ${execution.status}`;
+  if (execution.kind === "failed") return `PayPal refused it with ${execution.status}`;
+  if (execution.kind === "refused") return `not sent, ${execution.reason}`;
+  return "nothing to send";
+}
+
+// note: a dry-run approval has nothing left to send; approving it again would only repeat it
+function isSettledDemo({ decisions }: ReviewState): boolean {
+  const last = decisions.at(-1);
+  return last?.outcome === "approved" && last.execution.kind === "dry-run";
 }
 
 function DecisionBar({ state, onDecided }: PanelProps) {
@@ -99,10 +127,10 @@ function DecisionBar({ state, onDecided }: PanelProps) {
       {state.decisions.map((d) => (
         <p key={d.id} className="banner-exec">
           {d.outcome === "approved" ? "You approved it" : "You rejected it"} on {formatClock(d.at)}
-          {d.outcome === "approved" ? `; the send was a ${d.execution.kind}.` : d.note ? `: "${d.note}"` : "."}
+          {d.outcome === "approved" ? `: ${describeSend(d.execution)}.` : d.note ? `: "${d.note}"` : "."}
         </p>
       ))}
-      {canDecide(state.status) && (
+      {canDecide(state.status) && !isSettledDemo(state) && (
         <div className="decision">
           {/* threat: one click must not move money; approving takes a second, deliberate one */}
           <button className="button button-approve" disabled={busy} onClick={() => (armed ? void decide("approve") : setArmed(true))}>
