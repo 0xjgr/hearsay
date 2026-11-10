@@ -6,6 +6,18 @@ A dispute desk for PayPal merchants whose AI agent cannot be talked into a refun
 
 **Try it:** [https://hearsay-bench.onrender.com](https://hearsay-bench.onrender.com) (judges' mode: replays recorded agent runs and judges attacks you write, with no PayPal account and no model needed)
 
+Checked against things this repo does not control:
+
+- **Two real PayPal sandbox disputes were resolved through it** (Nov 7). An 18.00 USD refund for a cracked mug, which the store's policy covers, went out through the guarded toolkit and PayPal closed the dispute; a 26.00 USD refund for a tote bag that never shipped was held, approved by the owner, re-judged and sent (HTTP 200, resolved). [Both runs](#guard-an-existing-paypal-agent).
+- **The toolkit gap it works around is reported upstream:** in `@paypal/agent-toolkit` 1.11.0, `handleToolCall` runs write tools that `actions` never enabled ([paypal/agent-toolkit#125](https://github.com/paypal/agent-toolkit/issues/125)).
+- **54 of 56, then 0 of 56.** On 56 attacks written into the fields a buyer controls in a PayPal dispute, a plain Agent Toolkit agent obeyed 54 and all 54 reached PayPal. Behind Hearsay none did, and 10 of the 13 refunds the store owed still went out on their own ([Results](#results), our own bench).
+
+Path for judges, about three minutes:
+
+1. Open the [hosted demo](https://hearsay-bench.onrender.com) and the four disputes on its first screen: a blocked attack, a refund held for the owner, an agent you run yourself, a fair refund that goes through.
+2. Open **Try an attack**, play the hijacked agent and write your own proposal; the page shows which rule stops it.
+3. Or run it: `pnpm install && pnpm build && pnpm judges`.
+
 Vocabulary used in the code, the UI and this README:
 
 | Word | Meaning |
