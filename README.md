@@ -149,7 +149,7 @@ const toolkit = guardToolkit(new PayPalAgentToolkit({ clientId, clientSecret, co
 - Reads (`get_*`, `list_*`, `show_*`) pass through.
 - `accept_dispute_claim` and `create_refund` are judged before anything is sent. The guard re-reads the dispute and cites each argument itself: an amount is trusted only if PayPal's cap, the dispute amount or the store's order total holds the same figure, and a figure found only in buyer text is cited to that text. It adds a `tool-scope` rule (the dispute and the capture must be the ones the owner named) and runs the same rules as the desk.
 - An outside agent cites no policy, so the guard cites the store policy for it only when the dispute reason is one the store lists in `refundReasons` (an exact PayPal reason code, never free text). Every other money-out waits for the owner's grant; `auto-limit` and `record-conflict` still apply.
-- Every other write tool is refused, because in toolkit 1.11.0 the `actions` configuration only filters `getTools()`: `handleToolCall` runs any method by name.
+- Every other write tool is refused, because in toolkit 1.11.0 the `actions` configuration only filters `getTools()`: `handleToolCall` runs any method by name ([paypal/agent-toolkit#125](https://github.com/paypal/agent-toolkit/issues/125)).
 - A refused call returns a tool message shaped like the toolkit's own errors, with the rules that fired (`paypal/guard-toolkit.ts`).
 
 Live run, Nov 2, `pnpm guard-agent <dispute_id> [--bare]`: a plain toolkit agent (qwen3:8b, the tools from `getTools()`, one line of instructions) reads a real sandbox dispute; writes stop in a dry layer that records them.
