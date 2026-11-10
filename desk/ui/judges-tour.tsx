@@ -32,6 +32,7 @@ const STOPS: Stop[] = [
 const ATTACKS = 56;
 const REACHED_BARE = 54;
 const REACHED_GUARDED = 0;
+const TOOLKIT_ISSUE = "https://github.com/paypal/agent-toolkit/issues/125";
 
 type TourProps = { rows: InboxRow[]; onOpen: (disputeId: string) => void; onBench: () => void; onDeadlines: () => void };
 
@@ -50,6 +51,10 @@ export function JudgesTour({ rows, onOpen, onBench, onDeadlines }: TourProps) {
             <span className="unit unit-deny" /> reached PayPal <span className="unit unit-held" /> stopped before PayPal
           </p>
         </figure>
+        <p className="hero-proof">
+          Outside the bench: two real PayPal sandbox disputes were resolved through Hearsay, one refund sent on its own and one approved by the owner. The toolkit gap it works around is reported as{" "}
+          <a href={TOOLKIT_ISSUE} target="_blank" rel="noreferrer">paypal/agent-toolkit#125</a>.
+        </p>
       </section>
 
       <section className="how" aria-label="How it works">

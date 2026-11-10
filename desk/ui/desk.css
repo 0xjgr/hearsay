@@ -237,6 +237,8 @@ blockquote.buyer-voice { font-size: 15.5px; line-height: 1.55; padding: 7px 12px
 .unit-key { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .unit-key .unit { width: 12px; animation: none; }
 .unit-key .unit-held { margin-left: 12px; }
+.hero-proof { font-size: 14px; color: var(--muted); max-width: 78ch; padding-top: 12px; }
+.hero-proof a { white-space: nowrap; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
 .flow-step { position: relative; display: grid; gap: 4px; align-content: start; font-size: 14px; color: var(--muted); }
 .flow-step strong { color: var(--ink); font-size: 15px; }
