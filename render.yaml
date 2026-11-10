@@ -3,7 +3,7 @@ services:
   - type: web
     name: hearsay-bench
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npx -y pnpm@12.16.1 install --frozen-lockfile && npx -y pnpm@12.16.1 build
     startCommand: node bench/serve-judges.ts
     healthCheckPath: /api/mode
